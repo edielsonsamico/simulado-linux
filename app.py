@@ -166,7 +166,7 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
         else:
             st.info("Nenhum registro ainda.")
 
-# --- MODO 2: TREINO POR TÓPICO E QTD PERSONALIZADA (CORRIGIDO) ---
+# --- MODO 2: TREINO POR TÓPICO E QTD PERSONALIZADA ---
 elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     st.title("🎯 Bateria de Exercícios por Assunto")
     st.write("Foque seus estudos! Escolha o assunto específico e a quantidade exata de questões.")
