@@ -19,59 +19,51 @@ QUESTOES_POOL = [
     {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
 ]
 
-# TENTATIVA DE IMPORTAÇÃO DOS ARQUIVOS EXTERNOS COMPLEMENTARES
+# CARREGAMENTO SEGURO E ISOLADO DOS SEUS ARQUIVOS EXTERNOS
 for i in range(101, 111):
     try:
+        # Tenta importar dinamicamente o arquivo (ex: topico101)
         modulo = __import__(f"topico{i}")
+        # Pega a lista dentro dele (ex: POOL_101)
         pool = getattr(modulo, f"POOL_{i}")
+        # Adiciona apenas as questões válidas
         for q in pool:
-            if q not in QUESTOES_POOL:
+            if isinstance(q, dict) and "id" in q and q not in QUESTOES_POOL:
                 QUESTOES_POOL.append(q)
-    except Exception:
-        pass
+    except Exception as e:
+        # Se um tópico falhar (erro de sintaxe nele), o app ignora ele e continua funcionando com os outros!
+        print(f"Aviso: Não foi possível carregar o tópico {i} devido ao erro: {e}")
 
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
-# DESIGN INTERFACE CUSTOMIZADA COM DESTAQUE PARA BOTÃO SELECIONADO
+# DESIGN INTERFACE CUSTOMIZADA
 st.markdown("""
     <style>
-        /* Estilo Geral das Labels do Radio */
         div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
             font-weight: 500 !important;
             color: #334155 !important;
             font-size: 16px !important;
         }
-        
-        /* Círculo do Radio Não Selecionado */
         div[data-testid="stRadio"] div[role="radiogroup"] label [data-testid="stWidgetCircle"] {
             border: 2px solid #CBD5E1 !important;
             background-color: #FFFFFF !important;
             width: 20px !important;
             height: 20px !important;
         }
-        
-        /* Efeito de Hover */
         div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
             background-color: #F8FAFC !important;
             border-radius: 8px;
         }
-
-        /* DESTAQUE DA ALTERNATIVA SELECIONADA */
         div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
             background-color: #EFF6FF !important; 
             border: 1px solid #3B82F6 !important; 
             border-radius: 8px !important;
             padding: 8px 12px !important;
-            transition: all 0.2s ease;
         }
-
-        /* Texto da alternativa selecionada */
         div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
             color: #1E40AF !important; 
             font-weight: 700 !important;
         }
-
-        /* Estilo do Checkbox de Rankings */
         .stCheckbox label {
             background-color: #EFF6FF !important;
             padding: 6px 12px !important;
@@ -149,3 +141,172 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
 if modo_selecionado == "📖 Área de Treino (Geral)":
     st.title("📖 Área de Treino e Fixação Técnica")
     st.write("Responda às questões abaixo. O feedback é exibido em tempo real para cada questão.")
+
+    questoes_treino = st.session_state.questoes_treino
+    total_acertos_treino = 0
+
+    for idx, q in enumerate(questoes_treino):
+        st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
+        st.markdown(f"**{q['pergunta']}**")
+        
+        chave_resposta = f"treino_{q['id']}"
+        indice_padrao = None
+        if chave_resposta in st.session_state.respostas_treino_salvas:
+            if st.session_state.respostas_treino_salvas[chave_resposta] in q['opcoes']:
+                indice_padrao = q['opcoes'].index(st.session_state.respostas_treino_salvas[chave_resposta])
+
+        resposta = st.radio(
+            f"Selecione a opção da Questão {idx + 1}:",
+            q['opcoes'],
+            index=indice_padrao,
+            key=f"radio_treino_{q['id']}"
+        )
+        
+        st.session_state.respostas_treino_salvas[chave_resposta] = resposta
+
+        if resposta:
+            if resposta == q['correta']:
+                st.success("🎯 Resposta Correta!")
+                total_acertos_treino += 1
+            else:
+                st.error(f"❌ Resposta Incorreta. A alternativa certa é: **{q['correta']}**")
+            
+            with st.expander("📚 Ver Explicação Técnica"):
+                st.info(q['explicacao'])
+        
+        st.divider()
+
+    if nome_usuario:
+        st.session_state.ranking_treino[nome_usuario] = f"{total_acertos_treino}/{len(questoes_treino)}"
+
+# --- MODO 2: TREINO POR TÓPICO ---
+elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
+    st.title("🎯 Treino Direcionado por Tópicos")
+    
+    topicos_disponiveis = sorted(list(set([q['topico'] for q in QUESTOES_POOL])))
+    topico_escolhido = st.selectbox("Escolha o tópico que deseja dominar:", topicos_disponiveis)
+    
+    questoes_filtradas = [q for q in QUESTOES_POOL if q['topico'] == topico_escolhido]
+    st.write(f"Encontradas **{len(questoes_filtradas)}** questões para este tópico.")
+    
+    total_acertos_topico = 0
+    
+    for idx, q in enumerate(questoes_filtradas):
+        st.markdown(f"### Questão {idx + 1}")
+        st.markdown(f"**{q['pergunta']}**")
+        
+        resposta = st.radio(
+            f"Opções para a Questão {idx + 1}:",
+            q['opcoes'],
+            index=None,
+            key=f"radio_topico_{q['id']}"
+        )
+        
+        if  resposta:
+            if resposta == q['correta']:
+                st.success("🎯 Correto!")
+                total_acertos_topico += 1
+            else:
+                st.error(f"❌ Erro! Alternativa correta: **{q['correta']}**")
+            
+            with st.expander("📚 Detalhes do Conceito"):
+                st.info(q['explicacao'])
+        st.divider()
+
+    if nome_usuario and len(questoes_filtradas) > 0:
+        st.session_state.ranking_topico[nome_usuario] = f"{total_acertos_topico}/{len(questoes_filtradas)}"
+
+# --- MODO 3: SIMULADO LPI ---
+elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
+    st.title("⏱️ Simulado Preparatório LPI")
+    
+    if not st.session_state.tempo_inicio_simulado:
+        st.session_state.tempo_inicio_simulado = time.time()
+
+    questoes_simulado = st.session_state.questoes_simulado
+    
+    if not st.session_state.simulado_entregue:
+        st.write("Regras da Prova: O gabarito e as explicações só aparecem após o envio definitivo.")
+        
+        for idx, q in enumerate(questoes_simulado):
+            st.markdown(f"##### {idx + 1}. {q['pergunta']}")
+            
+            resposta = st.radio(
+                f"Escolha para a Q{idx + 1}:",
+                q['opcoes'],
+                index=None,
+                key=f"simulado_q_{q['id']}",
+                label_visibility="collapsed"
+            )
+            if resposta:
+                st.session_state.respostas_simulado[q['id']] = resposta
+            st.divider()
+
+        if st.button("📥 Entregar Simulado e Gerar Nota", type="primary"):
+            st.session_state.simulado_entregue = True
+            st.rerun()
+
+    else:
+        tempo_total = round(time.time() - st.session_state.tempo_inicio_simulado)
+        minutos = tempo_total // 60
+        segundos = tempo_total % 60
+        
+        pontuacao = 0
+        relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\nAluno: {nome_usuario}\nTempo de Prova: {minutos}m {segundos}s\n\n"
+        
+        st.subheader("📊 Resultado Geral da Prova")
+        
+        for idx, q in enumerate(questoes_simulado):
+            resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
+            if resp_aluno == q['correta']:
+                pontuacao += 1
+                status = "CORRETA"
+            else:
+                status = "INCORRETA"
+                
+            relatorio_texto += f"Q{idx+1}: {status} (Escolheu: {resp_aluno} | Correta: {q['correta']})\n"
+
+        percentual = (pontuacao / len(questoes_simulado)) * 100
+        
+        if percentual >= 70:
+            st.balloons()
+            st.success(f"🎉 **Aprovado!** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+            if nome_usuario:
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Aprovado)"
+        else:
+            st.error(f"📉 **Abaixo da meta de 70%.** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+            if nome_usuario:
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Recuperação)"
+            
+        st.metric(label="Tempo Decorrido", value=f"{minutos}m {segundos}s")
+
+        with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
+            for idx, q in enumerate(questoes_simulado):
+                resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
+                if resp_aluno == q['correta']:
+                    st.write(f"✅ **{idx+1}. {q['pergunta']}**")
+                else:
+                    st.write(f"❌ **{idx+1}. {q['pergunta']}**")
+                st.write(f"Sua resposta: *{resp_aluno}* | Resposta certa: **{q['correta']}**")
+                st.info(f"Explicação: {q['explicacao']}")
+                st.divider()
+
+        if email_usuario and nome_usuario:
+            relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
+            enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
+
+        if st.button("🔄 Refazer Novo Simulado"):
+            st.session_state.questoes_simulado = generar_40_questoes()
+            st.session_state.respostas_simulado = {}
+            st.session_state.simulado_entregue = False
+            st.session_state.tempo_inicio_simulado = None
+            st.rerun()
+
+# --- RANKING E PLACAR LIDERES NA BARRA LATERAL ---
+st.sidebar.divider()
+st.sidebar.subheader("🏆 Placar de Líderes")
+if st.sidebar.checkbox("Exibir Rankings Ativos"):
+    st.sidebar.markdown("**Área de Treino:**")
+    st.sidebar.json(st.session_state.ranking_treino)
+    st.sidebar.markdown("**Simulados LPI:**")
+    st.sidebar.json(st.session_state.ranking_simulado)
