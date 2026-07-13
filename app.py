@@ -5,7 +5,9 @@ from email.mime.multipart import MIMEMultipart
 import random
 import time
 
-# BANCO DE DADOS INTEGRADO (GARANTE QUE O SIMULADOR NUNCA ABRA EM BRANCO)
+# ==========================================
+# 1. BANCO DE DADOS INTEGRADO
+# ==========================================
 QUESTOES_POOL = [
     {"id": 1, "topico": "Tópico 101: Arquitetura", "pergunta": "Qual comando é utilizado para listar informações detalhadas do chipset e dos componentes no barramento PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci", "explicacao": "O comando lspci varre o barramento PCI do hardware listando controladores, placas e chipsets integrados."},
     {"id": 2, "topico": "Tópico 102: Pacotes", "pergunta": "De acordo com a hierarquia do FHS, qual diretório é destinado a guardar exclusivamente os arquivos de configuração específicos da máquina local?", "opcoes": ["/etc", "/var", "/usr", "/opt"], "correta": "/etc", "explicacao": "O diretório /etc é o local padronizado pelo FHS para armazenar scripts e arquivos de configuração de texto do sistema."},
@@ -19,24 +21,53 @@ QUESTOES_POOL = [
     {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
 ]
 
-# CARREGAMENTO SEGURO E ISOLADO DOS SEUS ARQUIVOS EXTERNOS
+# ==========================================
+# 2. CARREGAMENTO DOS ARQUIVOS EXTERNOS
+# ==========================================
 for i in range(101, 111):
     try:
-        # Tenta importar dinamicamente o arquivo (ex: topico101)
         modulo = __import__(f"topico{i}")
-        # Pega a lista dentro dele (ex: POOL_101)
         pool = getattr(modulo, f"POOL_{i}")
-        # Adiciona apenas as questões válidas
         for q in pool:
             if isinstance(q, dict) and "id" in q and q not in QUESTOES_POOL:
                 QUESTOES_POOL.append(q)
-    except Exception as e:
-        # Se um tópico falhar (erro de sintaxe nele), o app ignora ele e continua funcionando com os outros!
-        print(f"Aviso: Não foi possível carregar o tópico {i} devido ao erro: {e}")
+    except Exception:
+        pass
 
+# ==========================================
+# 3. FUNÇÕES GLOBAIS (ESTRUTURA CORRIGIDA)
+# ==========================================
+def gerar_40_questoes():
+    caderno = list(QUESTOES_POOL)
+    random.shuffle(caderno)
+    return caderno[:min(40, len(caderno))]
+
+def enviar_email_seguro(destinatario, assunto, relatorio):
+    try:
+        if "email" in st.secrets:
+            remetente = st.secrets["email"]["usuario"]
+            senha = st.secrets["email"]["senha"]
+            msg = MIMEMultipart()
+            msg['From'] = remetente
+            msg['To'] = destinatario
+            msg['Subject'] = assunto
+            msg.attach(MIMEText(relatorio, 'plain'))
+            server = smtplib.SMTP('smtp.gmail.com', 587)
+            server.starttls()
+            server.login(remetente, senha)
+            server.sendmail(remetente, destinatario, msg.as_string())
+            server.quit()
+            st.sidebar.success("✅ Boletim enviado para o e-mail!")
+        else:
+            st.sidebar.warning("⚠️ Sem configuração de e-mail nos Secrets.")
+    except Exception as e:
+        st.sidebar.error(f"❌ Erro no e-mail: {str(e)}")
+
+# ==========================================
+# 4. CONFIGURAÇÃO DA INTERFACE & INICIALIZAÇÃO
+# ==========================================
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
-# DESIGN INTERFACE CUSTOMIZADA
 st.markdown("""
     <style>
         div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
@@ -84,11 +115,6 @@ if "ranking_topico" not in st.session_state:
 if "respostas_treino_salvas" not in st.session_state:
     st.session_state.respostas_treino_salvas = {}
 
-def gerar_40_questoes():
-    caderno = list(QUESTOES_POOL)
-    random.shuffle(caderno)
-    return caderno[:min(40, len(caderno))]
-
 if 'questoes_treino' not in st.session_state:
     questoes_copia = list(QUESTOES_POOL)
     random.shuffle(questoes_copia)
@@ -104,7 +130,9 @@ if 'simulado_entregue' not in st.session_state:
 if 'tempo_inicio_simulado' not in st.session_state:
     st.session_state.tempo_inicio_simulado = None
 
-# BARRA LATERAL
+# ==========================================
+# 5. CONTROLES DA BARRA LATERAL
+# ==========================================
 st.sidebar.header("👤 Identificação do Aluno")
 nome_usuario = st.sidebar.text_input("Seu Nome para o Placar:", max_chars=20)
 email_usuario = st.sidebar.text_input("Seu E-mail:")
@@ -116,26 +144,9 @@ modo_selecionado = st.sidebar.radio(
     ["📖 Área de Treino (Geral)", "🎯 Treino por Tópico (Focado)", "⏱️ Simulado LPI (Prova Real 40 Q)"]
 )
 
-def enviar_email_seguro(destinatario, assunto, relatorio):
-    try:
-        if "email" in st.secrets:
-            remetente = st.secrets["email"]["usuario"]
-            senha = st.secrets["email"]["senha"]
-            msg = MIMEMultipart()
-            msg['From'] = remetente
-            msg['To'] = destinatario
-            msg['Subject'] = assunto
-            msg.attach(MIMEText(relatorio, 'plain'))
-            server = smtplib.SMTP('smtp.gmail.com', 587)
-            server.starttls()
-            server.login(remetente, senha)
-            server.sendmail(remetente, destinatario, msg.as_string())
-            server.quit()
-            st.sidebar.success("✅ Boletim enviado para o e-mail!")
-        else:
-            st.sidebar.warning("⚠️ Sem configuração de e-mail nos Secrets.")
-    except Exception as e:
-        st.sidebar.error(f"❌ Erro no e-mail: {str(e)}")
+# ==========================================
+# 6. FLUXO DOS AMBIENTES DE ESTUDO
+# ==========================================
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 if modo_selecionado == "📖 Área de Treino (Geral)":
@@ -202,7 +213,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             key=f"radio_topico_{q['id']}"
         )
         
-        if  resposta:
+        if resposta:
             if resposta == q['correta']:
                 st.success("🎯 Correto!")
                 total_acertos_topico += 1
@@ -296,7 +307,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
             enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
 
         if st.button("🔄 Refazer Novo Simulado"):
-            st.session_state.questoes_simulado = generar_40_questoes()
+            st.session_state.questoes_simulado = gerar_40_questoes()
             st.session_state.respostas_simulado = {}
             st.session_state.simulado_entregue = False
             st.session_state.tempo_inicio_simulado = None
