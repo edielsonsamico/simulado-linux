@@ -240,7 +240,8 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
         with col1:
             assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
         with col2:
-            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:",)
+            # CORRIGIDO DEFINITIVAMENTE: Inserida a lista de opções numéricas [10, 20, 30, 40]
+            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
 
         chave_bateria = f"bateria_{assunto_escolhido}_{qtd_escolhida}"
         
@@ -251,6 +252,3 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
                 pool_filtrado = [q for q in QUESTOES_POOL if q['topico'] == assunto_escolhido]
             
             random.shuffle(pool_filtrado)
-            st.session_state.questoes_bateria_fixas = pool_filtrado[:min(qtd_escolhida, len(pool_filtrado))]
-            st.session_state.chave_atual_bateria = chave_bateria
-
