@@ -69,27 +69,19 @@ QUESTOES_POOL = [
         "opcoes": ["mkdir", "newdir", "md", "create -d"], "correta": "mkdir",
         "explicacao": "O comando 'mkdir' (make directory) é a ferramenta padrão POSIX para criação de novas pastas."
     }
+]
+
 # CONEXÃO AUTOMÁTICA COM O BANCO DE DADOS EM NUVEM
-# Usando st.experimental_connection se o KV falhar, ou fallback local estável
 if "ranking_lpi" not in st.session_state:
     try:
-        # Tenta conectar ao banco de dados interno da nuvem de forma direta
         db_conn = st.connection("ranking_db", type="dict")
         st.session_state.ranking_lpi = db_conn
     except Exception:
-        # Se rodar offline no seu PC, ele salva na memória local
         st.session_state.ranking_lpi = st.session_state.get("ranking_local_backup", {})
 
 db = {"ranking_lpi": st.session_state.ranking_lpi}
 
-
-# Conexão com o banco de dados local temporário para a versão offline
-if "ranking_local" not in st.session_state:
-    st.session_state.ranking_local = {}
-db = {"ranking_lpi": st.session_state.ranking_local}
-
 def gerar_blocos():
-    # Seleciona de forma aleatória sem repetir baseado na quantidade disponível
     qtd_questoes = min(40, len(QUESTOES_POOL))
     return {
         "Bloco A": random.sample(QUESTOES_POOL, k=qtd_questoes),
@@ -97,7 +89,6 @@ def gerar_blocos():
         "Bloco C": random.sample(QUESTOES_POOL, k=qtd_questoes)
     }
 
-# Gerenciar estados de seção do usuário atual
 if 'blocos' not in st.session_state:
     st.session_state.blocos = gerar_blocos()
 if 'respostas' not in st.session_state:
@@ -108,10 +99,8 @@ if 'corrigido' not in st.session_state:
 st.title("🎓 Simulador & Ranking - Linux Essentials")
 st.write("Estude com seus amigos! Faça o teste, entre para o placar de líderes e receba o gabarito detalhado por e-mail.")
 
-# TABELAS DA INTERFACE PRINCIPAL
 aba_prova, aba_ranking = st.tabs(["📝 Responder Simulado", "🏆 Ranking dos Amigos"])
 
-# BARRA LATERAL
 st.sidebar.header("👤 Identificação")
 nome_usuario = st.sidebar.text_input("Seu Nome/Apelido para o Ranking:", max_chars=20)
 email_usuario = st.sidebar.text_input("Seu E-mail para receber as respostas:")
@@ -126,20 +115,26 @@ if st.sidebar.button("♻️ Solicitar Novas Questões (Reset Geral)"):
     st.session_state.corrigido = False
     st.rerun()
 
-# FUNÇÃO DE ENVIO DE E-MAIL LOCAL (Apenas para testes rápidos locais)
-def enviar_email_local(destinatario, relatorio):
+def enviar_email_seguro(destinatario, relatorio):
     try:
-        remetente = "seu_email_teste@gmail.com"
+        remetente = st.secrets["email"]["usuario"]
+        senha = st.secrets["email"]["senha"]
+        
         msg = MIMEMultipart()
         msg['From'] = remetente
         msg['To'] = destinatario
         msg['Subject'] = "Desempenho - Simulado Linux Essentials"
         msg.attach(MIMEText(relatorio, 'plain'))
-        st.sidebar.info("Simulação de e-mail criada. Configure o SMTP na nuvem para o envio real.")
+        
+        server = smtplib.SMTP('://gmail.com', 587)
+        server.starttls()
+        server.login(remetente, senha)
+        server.sendmail(remetente, destinatario, msg.as_string())
+        server.quit()
+        st.sidebar.success("✅ Histórico enviado para o seu e-mail!")
     except Exception:
-        pass
+        st.sidebar.error("⚠️ Configuração de e-mail pendente nos Secrets.")
 
-# ABA 1: RENDERIZAÇÃO DA PROVA
 with aba_prova:
     questoes_do_bloco = st.session_state.blocos[bloco_selecionado]
     st.subheader(f"Testando conhecimentos: {bloco_selecionado}")
@@ -159,33 +154,30 @@ with aba_prova:
             st.info(f"💡 **Explicação:** {q['explicacao']}")
         st.divider()
 
-    # Finalizar prova e calcular pontos
     if st.button("🏁 Entregar Prova e Calcular Nota", type="primary"):
         if not nome_usuario:
             st.warning("⚠️ Digite seu nome na barra lateral antes de finalizar para salvar sua pontuação no ranking!")
         else:
             st.session_state.corrigido = True
-            
-            # Cálculo de score
             acertos = sum(1 for idx, quest in enumerate(questoes_do_bloco) if st.session_state.respostas.get(f"{bloco_selecionado}_q_{idx}") == quest['correta'])
             total = len(questoes_do_bloco)
             porcentagem = (acertos / total) * 100
             
-            # Salvar no Ranking
             ranking_atual = db["ranking_lpi"]
             if nome_usuario not in ranking_atual or porcentagem > ranking_atual[nome_usuario]:
                 ranking_atual[nome_usuario] = porcentagem
                 db["ranking_lpi"] = ranking_atual
             
-            # Montagem do relatório
             relatorio = f"Resultados de {nome_usuario} no {bloco_selecionado}\nAcertos: {acertos}/{total} ({porcentagem:.1f}%)\n\n"
+            for idx, quest in enumerate(questoes_do_bloco):
+                u_resp = st.session_state.respostas.get(f"{bloco_selecionado}_q_{idx}")
+                relatorio += f"Q{idx+1}: {quest['pergunta']}\nSua Resposta: {u_resp} | Correta: {quest['correta']}\n\n"
             
             st.success(f"Resultado computado: Acertou {acertos} de {total} questões ({porcentagem:.1f}%)!")
             if email_usuario:
-                enviar_email_local(email_usuario, relatorio)
+                enviar_email_seguro(email_usuario, relatorio)
             st.rerun()
 
-# ABA 2: RANKING LOCAL
 with aba_ranking:
     st.subheader("🏆 Líderes do Simulado")
     ranking_dados = db["ranking_lpi"]
