@@ -35,7 +35,7 @@ for i in range(101, 111):
         pass
 
 # ==========================================
-# 3. FUNÇÕES GLOBAIS (ESTRUTURA CORRIGIDA)
+# 3. FUNÇÕES GLOBAIS
 # ==========================================
 def gerar_40_questoes():
     caderno = list(QUESTOES_POOL)
@@ -134,8 +134,8 @@ if 'tempo_inicio_simulado' not in st.session_state:
 # 5. CONTROLES DA BARRA LATERAL
 # ==========================================
 st.sidebar.header("👤 Identificação do Aluno")
-nome_usuario = st.sidebar.text_input("Seu Nome para o Placar:", max_chars=20)
-email_usuario = st.sidebar.text_input("Seu E-mail:")
+nome_usuario = st.sidebar.text_input("Seu Nome para o Placar (Obrigatório):", max_chars=20).strip()
+email_usuario = st.sidebar.text_input("Seu E-mail (Opcional):").strip()
 
 st.sidebar.divider()
 st.sidebar.subheader("🕹️ Selecione o Modo de Estudo")
@@ -253,9 +253,18 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 st.session_state.respostas_simulado[q['id']] = resposta
             st.divider()
 
+        # CONDIÇÕES DE VALIDAÇÃO ANTES DE ENTREGAR
+        total_respondidas = len(st.session_state.respostas_simulado)
+        total_necessarias = len(questoes_simulado)
+        
         if st.button("📥 Entregar Simulado e Gerar Nota", type="primary"):
-            st.session_state.simulado_entregue = True
-            st.rerun()
+            if not nome_usuario:
+                st.error("🛑 Erro: Identificação necessária! Digite o seu **Nome** na barra lateral para registrar sua participação no placar.")
+            elif total_respondidas < total_necessarias:
+                st.error(f"⚠️ Atenção: Você não pode entregar o simulado incompleto! Respondeu apenas **{total_respondidas} de {total_necessarias}** questões.")
+            else:
+                st.session_state.simulado_entregue = True
+                st.rerun()
 
     else:
         tempo_total = round(time.time() - st.session_state.tempo_inicio_simulado)
@@ -302,6 +311,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 st.info(f"Explicação: {q['explicacao']}")
                 st.divider()
 
+        # O e-mail só é enviado se o usuário tiver preenchido o campo de e-mail opcional
         if email_usuario and nome_usuario:
             relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
             enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
