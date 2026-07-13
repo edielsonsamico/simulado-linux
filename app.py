@@ -172,7 +172,7 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 if modo_selecionado == "📖 Área de Treino (Geral)":
-    st.title("📖 Área de Treino e Fixação Técnica")
+    st.title("📖 Área de Treino e Fixação Técnico")
     st.write("Dividido em blocos rotativos para estabilidade do navegador.")
 
     tamanho_bloco = 100
