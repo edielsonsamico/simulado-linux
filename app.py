@@ -48,7 +48,6 @@ email_usuario = st.sidebar.text_input("Seu E-mail:")
 
 st.sidebar.divider()
 st.sidebar.subheader("🕹️ Selecione o Modo de Estudo")
-# Nova opção adicionada no menu dinâmico
 modo_selecionado = st.sidebar.radio(
     "Ambiente:", 
     ["📖 Área de Treino (Geral)", "🎯 Treino por Tópico (Focado)", "⏱️ Simulado LPI (Prova Real 40 Q)"]
@@ -112,7 +111,7 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
         else:
             st.info("Nenhum registro ainda.")
 
-# --- NOVO MODO: TREINO POR TÓPICO E QTD PERSONALIZADA ---
+# --- MODO 2: TREINO POR TÓPICO E QTD PERSONALIZADA ---
 elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     st.title("🎯 Bateria de Exercícios por Assunto")
     st.write("Foque seus estudos! Escolha o assunto específico e a quantidade exata de questões que deseja resolver.")
@@ -120,7 +119,6 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     aba_filtro, aba_rank_filtro = st.tabs(["⚡ Configurar e Responder", "🏆 Líderes (Treino Focado)"])
 
     with aba_filtro:
-        # Extrai dinamicamente todos os tópicos únicos do banco de dados
         topicos_disponiveis = sorted(list(set(q['topico'] for q in QUESTOES_POOL)))
         topicos_disponiveis.insert(0, "Todos os Assuntos")
         
@@ -128,15 +126,14 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
         with col1:
             assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
         with col2:
+            # CORRIGIDO: Agora com as opções numéricas fechadas corretamente
             qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
 
-        # Filtra o banco baseado no assunto selecionado
         if assunto_escolhido == "Todos os Assuntos":
             pool_filtrado = list(QUESTOES_POOL)
         else:
             pool_filtrado = [q for q in QUESTOES_POOL if q['topico'] == assunto_escolhido]
 
-        # Embaralha e limita ao tamanho escolhido pelo usuário ou ao máximo disponível
         random.shuffle(pool_filtrado)
         questoes_bateria = pool_filtrado[:min(qtd_escolhida, len(pool_filtrado))]
 
@@ -148,7 +145,6 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             st.markdown(f"**Questão {idx+1} [{q['topico']}]:** {q['pergunta']}")
             resp_focada = st.radio("Sua resposta:", q['opcoes'], key=f"foco_{q['id']}_{idx}", index=None)
             
-            # Validação instantânea e comentada para fixação
             if st.checkbox("💡 Corrigir e Ver Comentário", key=f"fococheck_{q['id']}_{idx}"):
                 if resp_focada == q['correta']:
                     st.success(f"✅ Correto! Resposta: {q['correta']}")
@@ -218,3 +214,6 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
         if st.button("🏁 Entregar Caderno de Questões", type="primary", disabled=st.session_state.simulado_entregue):
             if not nome_usuario:
+                st.error("⚠️ Insira seu nome na barra lateral esquerda antes de entregar!")
+            else:
+                st.session_state.simulado_entregue = True
