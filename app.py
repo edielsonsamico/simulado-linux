@@ -32,23 +32,46 @@ for i in range(101, 111):
 
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
+# DESIGN INTERFACE CUSTOMIZADA COM DESTAQUE PARA BOTÃO SELECIONADO
 st.markdown("""
     <style>
+        /* Estilo Geral das Labels do Radio */
         div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
-            font-weight: 600 !important;
-            color: #0F172A !important;
+            font-weight: 500 !important;
+            color: #334155 !important;
             font-size: 16px !important;
         }
+        
+        /* Círculo do Radio Não Selecionado */
         div[data-testid="stRadio"] div[role="radiogroup"] label [data-testid="stWidgetCircle"] {
-            border: 2px solid #1D4ED8 !important;
-            background-color: #F8FAFC !important;
+            border: 2px solid #CBD5E1 !important;
+            background-color: #FFFFFF !important;
             width: 20px !important;
             height: 20px !important;
         }
-        div[data-testid="stRadio"] div[role="radiogroup"] label:hover [data-testid="stWidgetCircle"] {
-            border-color: #2563EB !important;
-            background-color: #F1F5F9 !important;
+        
+        /* Efeito de Hover (Passar o mouse por cima) */
+        div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: #F8FAFC !important;
+            border-radius: 8px;
         }
+
+        /* DESTAQUE DA ALTERNATIVA SELECIONADA (Fundo colorido e borda azul) */
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+            background-color: #EFF6FF !important; 
+            border: 1px solid #3B82F6 !important; 
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+            transition: all 0.2s ease;
+        }
+
+        /* Texto da alternativa selecionada em negrito e azul escuro */
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
+            color: #1E40AF !important; 
+            font-weight: 700 !important;
+        }
+
+        /* Estilo do Checkbox de Rankings */
         .stCheckbox label {
             background-color: #EFF6FF !important;
             padding: 6px 12px !important;
@@ -113,7 +136,7 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
             msg.attach(MIMEText(relatorio, 'plain'))
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
-            server.login(remetente, sender)
+            server.login(remetente, senha)
             server.sendmail(remetente, destinatario, msg.as_string())
             server.quit()
             st.sidebar.success("✅ Boletim enviado para o e-mail!")
@@ -232,61 +255,3 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
     if st.session_state.simulado_entregue:
         tempo_total = round(time.time() - st.session_state.tempo_inicio_simulado)
-        minutos = tempo_total // 60
-        segundos = tempo_total % 60
-        
-        pontuacao = 0
-        relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\nAluno: {nome_usuario}\nTempo de Prova: {minutos}m {segundos}s\n\n"
-        
-        st.subheader("📊 Resultado Geral da Prova")
-        
-        for idx, q in enumerate(questoes_simulado):
-            resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
-            if resp_aluno == q['correta']:
-                pontuacao += 1
-                status = "CORRETA"
-            else:
-                status = "INCORRETA"
-                
-            relatorio_texto += f"Q{idx+1}: {status} (Escolheu: {resp_aluno} | Correta: {q['correta']})\n"
-
-        percentual = (pontuacao / len(questoes_simulado)) * 100
-        
-        if percentual >= 70:
-            st.balloons()
-            st.success(f"🎉 **Aprovado!** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
-        else:
-            st.error(f"📉 **Abaixo da meta de 70%.** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
-            
-        st.metric(label="Tempo Decorrido", value=f"{minutos}m {segundos}s")
-
-        with st.expander("🔍 Ver Gabarito Técnico Detalhado"):
-            for idx, q in enumerate(questoes_simulado):
-                resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
-                if resp_aluno == q['correta']:
-                    st.write(f"✅ **{idx+1}. {q['pergunta']}**")
-                else:
-                    st.write(f"❌ **{idx+1}. {q['pergunta']}**")
-                st.write(f"Sua resposta: *{resp_aluno}* | Resposta certa: **{q['correta']}**")
-                st.info(f"Explicação: {q['explicacao']}")
-                st.divider()
-
-        if email_usuario and nome_usuario:
-            relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
-            enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
-
-        if st.button("🔄 Refazer Novo Simulado"):
-            st.session_state.questoes_simulado = gerar_40_questoes()
-            st.session_state.respostas_simulado = {}
-            st.session_state.simulado_entregue = False
-            st.session_state.tempo_inicio_simulado = None
-            st.rerun()
-
-# --- RANKING E PLACAR LIDERES NA BARRA LATERAL ---
-st.sidebar.divider()
-st.sidebar.subheader("🏆 Placar de Líderes")
-if st.sidebar.checkbox("Exibir Rankings Ativos"):
-    st.sidebar.markdown("**Área de Treino:**")
-    st.sidebar.json(st.session_state.ranking_treino)
-    st.sidebar.markdown("**Simulados LPI:**")
-    st.sidebar.json(st.session_state.ranking_simulado)
