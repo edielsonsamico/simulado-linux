@@ -181,7 +181,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
         with col1:
             assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
         with col2:
-            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
+            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:",)
 
         chave_bateria = f"bateria_{assunto_escolhido}_{qtd_escolhida}"
         
@@ -250,4 +250,4 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
     aba_simulado, aba_rank_simulado = st.tabs(["📝 Caderno de Prova", "🏆 Placar dos Aprovados (Simulado)"])
 
-    if st.session_state.tempo_inicio_simulado is None:
+    # LINHA CORRIGIDA (UNIFICADA EM UMA SÓ LINHA PARA EVITAR ERROS DE INDENTAÇÃO)
