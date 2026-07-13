@@ -152,9 +152,9 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
             server.quit()
             st.sidebar.success("✅ Boletim enviado para o e-mail!")
         else:
-            st.sidebar.warning("⚠️ Configure as credenciais de e-mail nos Secrets do Streamlit Cloud.")
+            st.sidebar.warning("⚠️ Sem configuração de e-mail nos Secrets.")
     except Exception as e:
-        st.sidebar.error(f"❌ Erro no envio de e-mail: {str(e)}")
+        st.sidebar.error(f"❌ Erro no e-mail: {str(e)}")
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 if modo_selecionado == "📖 Área de Treino (Geral)":
@@ -199,7 +199,6 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
                 st.info(f"📘 **Explicação:** {q['explicacao']}")
             st.divider()
 
-        # Alinhamento das estatísticas de desempenho na tela
         if respondidas_treino > 0:
             st.metric("📊 Questões Respondidas neste Bloco", f"{respondidas_treino} de {len(questoes_fatia)}")
 
@@ -211,18 +210,16 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
             else:
                 score = (acertos_treino / len(questoes_fatia)) * 100
                 st.session_state.ranking_treino[nome_usuario] = max(score, st.session_state.ranking_treino.get(nome_usuario, 0))
-                
-                st.success(f"🎉 Progresso Computado! Você acertou {acertos_treino} questões de um bloco com {len(questoes_fatia)} itens. Aproveitamento: {score:.1f}%")
-                
+                st.success(f"🎉 Progresso Computado! Você acertou {acertos_treino} questões. Aproveitamento: {score:.1f}%")
                 if email_usuario:
-                    relatorio_treino = f"Boletim de Aproveitamento - Área de Treino Linux\n\nAluno: {nome_usuario}\nQuestões corretas: {acertos_treino} de {len(questoes_fatia)}\nAproveitamento Técnico: {score:.1f}%"
-                    enviar_email_seguro(email_usuario, f"Treino Geral Linux - {nome_usuario} ({score:.1f}%)", relatorio_treino)
-                
+                    rel_t = f"Aluno: {nome_usuario}\nAcertos: {acertos_treino} de {len(questoes_fatia)}\nAproveitamento: {score:.1f}%"
+                    enviar_email_seguro(email_usuario, f"Treino Geral Linux - {nome_usuario}", rel_t)
                 time.sleep(1)
+                st.rerun()
 
     with aba_rank_treino:
         if st.session_state.ranking_treino:
-            ranking_ordenado = sorted(st.session_state.ranking_treino.items(), key=lambda x: x[1], reverse=True)
+            ranking_ordenado = sorted(st.session_state.ranking_treino.items(), key=lambda x: x, reverse=True)
             for pos, (user, pt) in enumerate(ranking_ordenado, start=1):
                 st.write(f"**{pos}º Lugar:** {user} — Aproveitamento de `{pt:.1f}%`")
         else:
@@ -243,7 +240,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
         with col1:
             assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
         with col2:
-            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
+            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:",)
 
         chave_bateria = f"bateria_{assunto_escolhido}_{qtd_escolhida}"
         
@@ -251,3 +248,9 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             if assunto_escolhido == "Todos os Assuntos":
                 pool_filtrado = list(QUESTOES_POOL)
             else:
+                pool_filtrado = [q for q in QUESTOES_POOL if q['topico'] == assunto_escolhido]
+            
+            random.shuffle(pool_filtrado)
+            st.session_state.questoes_bateria_fixas = pool_filtrado[:min(qtd_escolhida, len(pool_filtrado))]
+            st.session_state.chave_atual_bateria = chave_bateria
+
