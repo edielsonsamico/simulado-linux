@@ -5,67 +5,80 @@ from email.mime.multipart import MIMEMultipart
 import random
 import time
 
-# INICIALIZA O POOL VAZIO
-QUESTOES_POOL = []
+# BANCO DE DADOS INTEGRADO (GARANTE QUE O SIMULADOR NUNCA ABRA EM BRANCO)
+QUESTOES_POOL = [
+    {"id": 1, "topico": "Tópico 101: Arquitetura", "pergunta": "Qual comando é utilizado para listar informações detalhadas do chipset e dos componentes no barramento PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci", "explicacao": "O comando lspci varre o barramento PCI do hardware listando controladores, placas e chipsets integrados."},
+    {"id": 2, "topico": "Tópico 102: Pacotes", "pergunta": "De acordo com a hierarquia do FHS, qual diretório é destinado a guardar exclusivamente os arquivos de configuração específicos da máquina local?", "opcoes": ["/etc", "/var", "/usr", "/opt"], "correta": "/etc", "explicacao": "O diretório /etc é o local padronizado pelo FHS para armazenar scripts e arquivos de configuração de texto do sistema."},
+    {"id": 3, "topico": "Tópico 103: Comandos", "pergunta": "No histórico do interpretador de comandos Bash, qual atalho de token repete imediatamente a execução do último comando utilizado?", "opcoes": ["!!", "!$", "history -r", "ctrl+r"], "correta": "!!", "explicacao": "As duas exclamações '!!' chamam e executam novamente no prompt a linha exata de comando disparada anteriormente."},
+    {"id": 4, "topico": "Tópico 104: Dispositivos", "pergunta": "Qual comando relata em tempo real o espaço livre/disponível e o uso em blocos para todos os sistemas de arquivos atualmente montados?", "opcoes": ["df", "du", "fdisk", "free"], "correta": "df", "explicacao": "O comando df (disk free) lê a tabela de montagens do sistema exibindo capacidades, espaço ocupado e pontos de montagem ativos."},
+    {"id": 5, "topico": "Tópico 105: Scripts e SQL", "pergunta": "Em um script executável em shell Bash, qual comando pausa a execução contínua para ler informações digitadas pelo usuário no teclado?", "opcoes": ["read", "input", "get", "scan"], "correta": "read", "explicacao": "O comando embutido 'read' interrompe o script colhendo os caracteres do fluxo de entrada padrão (stdin) e salvando-os em uma variável."},
+    {"id": 6, "topico": "Tópico 106: Desktops", "pergunta": "Qual é o caminho completo e o nome do arquivo de configuração central responsável por gerenciar os parâmetros de vídeo e entradas do servidor de janelas X11?", "opcoes": ["/etc/X11/xorg.conf", "/etc/X11/x11.conf", "/etc/xorg.conf", "/var/X11/xorg.conf"], "correta": "/etc/X11/xorg.conf", "explicacao": "O arquivo estático /etc/X11/xorg.conf centraliza os módulos de layout, mouses, teclados, placas de vídeo e monitores na arquitetura XOrg clássica."},
+    {"id": 7, "topico": "Tópico 107: Administração", "pergunta": "Qual arquivo confinado abriga de forma criptografada as senhas dos usuários e as regras específicas de expiração de validade da conta?", "opcoes": ["/etc/shadow", "/etc/passwd", "/etc/secure", "/var/shadow"], "correta": "/etc/shadow", "explicacao": "Por motivos de segurança, as hashes de senhas e políticas de obsolescência ficam trancadas no arquivo /etc/shadow com permissões restritas a root."},
+    {"id": 8, "topico": "Tópico 108: Serviços", "pergunta": "O protocolo de sincronização temporal NTP executa o seu tráfego vital por meio de qual porta de rede e protocolo de transporte, respectivamente?", "opcoes": ["Porta UDP 123", "Porta TCP 123", "Porta UDP 53", "Porta TCP 80"], "correta": "Porta UDP 123", "explicacao": "O Network Time Protocol (NTP) dita a troca estruturada de pacotes de timestamp de tempo sobre datagramas na porta UDP 123."},
+    {"id": 9, "topico": "Tópico 109: Redes", "pergunta": "Na configuração básica e resolução estática sem domínio real de rede externa, qual arquivo mapeia pares de IP e Nome Local no Linux?", "opcoes": ["/etc/hosts", "/etc/resolv.conf", "/etc/networks", "/etc/hostname"], "correta": "/etc/hosts", "explicacao": "O arquivo /etc/hosts associa IPs a nomes locais manualmente, sem depender de servidores DNS."},
+    {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
+]
 
-# IMPORTAÇÃO SEGURA: CARREGA APENAS OS ARQUIVOS QUE EXISTIREM
+# TENTATIVA DE IMPORTAÇÃO DOS ARQUIVOS EXTERNOS COMPLEMENTARES
 try:
     from topico101 import POOL_101
-    QUESTOES_POOL += POOL_101
+    for q in POOL_101:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico102 import POOL_102
-    QUESTOES_POOL += POOL_102
+    for q in POOL_102:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico103 import POOL_103
-    QUESTOES_POOL += POOL_103
+    for q in POOL_103:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico104 import POOL_104
-    QUESTOES_POOL += POOL_104
+    for q in POOL_104:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico105 import POOL_105
-    QUESTOES_POOL += POOL_105
+    for q in POOL_105:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico106 import POOL_106
-    QUESTOES_POOL += POOL_106
+    for q in POOL_106:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico107 import POOL_107
-    QUESTOES_POOL += POOL_107
+    for q in POOL_107:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico108 import POOL_108
-    QUESTOES_POOL += POOL_108
+    for q in POOL_108:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico109 import POOL_109
-    QUESTOES_POOL += POOL_109
+    for q in POOL_109:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
 
 try:
     from topico110 import POOL_110
-    QUESTOES_POOL += POOL_110
+    for q in POOL_110:
+        if q not in QUESTOES_POOL: QUESTOES_POOL.append(q)
 except Exception: pass
-
-if not QUESTOES_POOL:
-    QUESTOES_POOL = [{
-        "id": 1, "topico": "Geral", 
-        "pergunta": "O simulador está carregando os bancos de dados...", 
-        "opcoes": ["Aguardar", "Atualizar"], "correta": "Aguardar", 
-        "explicacao": "Carregando arquivos."
-    }]
 
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
@@ -107,7 +120,7 @@ if "respostas_treino_salvas" not in st.session_state:
 def gerar_40_questoes():
     caderno = list(QUESTOES_POOL)
     random.shuffle(caderno)
-    return caderno[:40]
+    return caderno[:min(40, len(caderno))]
 
 if 'questoes_treino' not in st.session_state:
     questoes_copia = list(QUESTOES_POOL)
@@ -124,6 +137,7 @@ if 'simulado_entregue' not in st.session_state:
 if 'tempo_inicio_simulado' not in st.session_state:
     st.session_state.tempo_inicio_simulado = None
 
+# BARRA LATERAL
 st.sidebar.header("👤 Identificação do Aluno")
 nome_usuario = st.sidebar.text_input("Seu Nome para o Placar:", max_chars=20)
 email_usuario = st.sidebar.text_input("Seu E-mail:")
@@ -159,96 +173,7 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 if modo_selecionado == "📖 Área de Treino (Geral)":
     st.title("📖 Área de Treino e Fixação Técnica")
-    st.write("Dividido em blocos rotativos de no máximo 100 itens para estabilidade do navegador.")
+    st.write("Dividido em blocos rotativos para estabilidade do navegador.")
 
     tamanho_bloco = 100
     total_questoes = len(st.session_state.questoes_treino)
-    num_blocos = max(1, (total_questoes + tamanho_bloco - 1) // tamanho_bloco)
-    
-    opcoes_blocos = [f"Bloco {i+1} (Questões {i*tamanho_bloco+1} a {min((i+1)*tamanho_bloco, total_questoes)})" for i in range(num_blocos)]
-    bloco_selecionado_index = st.selectbox("📚 Escolha o Bloco de Exercícios atual:", range(num_blocos), format_func=lambda x: opcoes_blocos[x])
-    
-    inicio_fatia = bloco_selecionado_index * tamanho_bloco
-    fim_fatia = min(inicio_fatia + tamanho_bloco, total_questoes)
-    questoes_fatia = st.session_state.questoes_treino[inicio_fatia:fim_fatia]
-
-    aba_treino, aba_rank_treino = st.tabs(["🎯 Exercícios do Bloco", "🏆 Líderes (Treino)"])
-
-    with aba_treino:
-        acertos_treino = 0
-        respondidas_treino = 0
-        
-        for idx, q in enumerate(questoes_fatia):
-            real_idx = inicio_fatia + idx
-            st.markdown(f"### Questão {real_idx+1} — `{q['topico']}`")
-            st.write(q['pergunta'])
-            
-            chave_radio = f"treino_geral_{q['id']}_{real_idx}"
-            resp = st.radio("Selecione sua alternativa:", q['opcoes'], key=chave_radio, index=None)
-            
-            if resp is not None:
-                st.session_state.respostas_treino_salvas[chave_radio] = resp
-                respondidas_treino += 1
-
-            if st.checkbox("💡 Validar e Ver Explicação", key=f"check_{real_idx}"):
-                if resp == q['correta']:
-                    st.success(f"🎯 Resposta Correta: {q['correta']}")
-                    acertos_treino += 1
-                else:
-                    st.error(f"❌ Incorreta! A certa é: {q['correta']}")
-                st.info(f"📘 **Explicação:** {q['explicacao']}")
-            st.divider()
-
-        if respondidas_treino > 0:
-            st.metric("📊 Questões Respondidas neste Bloco", f"{respondidas_treino} de {len(questoes_fatia)}")
-
-        if st.button("🏁 Salvar meu Progresso no Ranking", type="primary"):
-            if not nome_usuario:
-                st.warning("⚠️ Digite seu nome na barra lateral antes de computar!")
-            elif respondidas_treino == 0:
-                st.error("❌ Você precisa responder pelo menos uma questão antes de salvar.")
-            else:
-                score = (acertos_treino / len(questoes_fatia)) * 100
-                st.session_state.ranking_treino[nome_usuario] = max(score, st.session_state.ranking_treino.get(nome_usuario, 0))
-                st.success(f"🎉 Progresso Computado! Você acertou {acertos_treino} questões. Aproveitamento: {score:.1f}%")
-                if email_usuario:
-                    rel_t = f"Aluno: {nome_usuario}\nAcertos: {acertos_treino} de {len(questoes_fatia)}\nAproveitamento: {score:.1f}%"
-                    enviar_email_seguro(email_usuario, f"Treino Geral Linux - {nome_usuario}", rel_t)
-                time.sleep(1)
-                st.rerun()
-
-    with aba_rank_treino:
-        if st.session_state.ranking_treino:
-            ranking_ordenado = sorted(st.session_state.ranking_treino.items(), key=lambda x: x, reverse=True)
-            for pos, (user, pt) in enumerate(ranking_ordenado, start=1):
-                st.write(f"**{pos}º Lugar:** {user} — Aproveitamento de `{pt:.1f}%`")
-        else:
-            st.info("Nenhum registro ainda.")
-
-# --- MODO 2: TREINO POR TÓPICO ---
-elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
-    st.title("🎯 Bateria de Exercícios por Assunto")
-    st.write("Foque seus estudos! Escolha o assunto específico e a quantidade exata de questões.")
-
-    aba_filtro, aba_rank_filtro = st.tabs(["⚡ Configurar e Responder", "🏆 Líderes (Treino Focado)"])
-
-    with aba_filtro:
-        topicos_disponiveis = sorted(list(set(q['topico'] for q in QUESTOES_POOL)))
-        topicos_disponiveis.insert(0, "Todos os Assuntos")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
-        with col2:
-            # CORRIGIDO DEFINITIVAMENTE: Inserida a lista de opções numéricas [10, 20, 30, 40]
-            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
-
-        chave_bateria = f"bateria_{assunto_escolhido}_{qtd_escolhida}"
-        
-        if "chave_atual_bateria" not in st.session_state or st.session_state.chave_atual_bateria != chave_bateria:
-            if assunto_escolhido == "Todos os Assuntos":
-                pool_filtrado = list(QUESTOES_POOL)
-            else:
-                pool_filtrado = [q for q in QUESTOES_POOL if q['topico'] == assunto_escolhido]
-            
-            random.shuffle(pool_filtrado)
