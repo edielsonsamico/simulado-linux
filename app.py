@@ -5,21 +5,24 @@ from email.mime.multipart import MIMEMultipart
 import random
 import time
 
-# IMPORTAÇÃO SEGURA DAS 40 QUESTÕES DE ARQUIVOS SEPARADOS
+# IMPORTAÇÃO DAS 40 QUESTÕES DOS ARQUIVOS SEPARADOS
 from questoes_parte1 import POOL_1
 from questoes_parte2 import POOL_2
 
-# Une as duas metades em uma lista oficial com 40 questões exclusivas
+# Lista oficial unificada
 QUESTOES_POOL = POOL_1 + POOL_2
 
-st.set_page_config(page_title="Linux Essentials - Treino e Simulado", page_icon="🐧", layout="wide")
+st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
+# Inicialização dos rankings na sessão
 if "ranking_treino" not in st.session_state:
     st.session_state.ranking_treino = {}
 if "ranking_simulado" not in st.session_state:
     st.session_state.ranking_simulado = {}
+if "ranking_topico" not in st.session_state:
+    st.session_state.ranking_topico = {}
 
-# Sorteia exatamente as 40 questões sem nenhuma repetição
+# Função para gerar simulado de 40 questões sem repetição
 def gerar_40_questoes():
     caderno = list(QUESTOES_POOL)
     random.shuffle(caderno)
@@ -38,13 +41,18 @@ if 'simulado_entregue' not in st.session_state:
 if 'tempo_inicio_simulado' not in st.session_state:
     st.session_state.tempo_inicio_simulado = None
 
+# BARRA LATERAL - IDENTIFICAÇÃO
 st.sidebar.header("👤 Identificação do Aluno")
 nome_usuario = st.sidebar.text_input("Seu Nome para o Placar:", max_chars=20)
 email_usuario = st.sidebar.text_input("Seu E-mail:")
 
 st.sidebar.divider()
-st.sidebar.subheader("🕹️ Ambiente")
-modo_selecionado = st.sidebar.radio("Escolha o Modo:", ["📖 Área de Treino (Fixação)", "⏱️ Simulado LPI (Prova Real 40 Q)"])
+st.sidebar.subheader("🕹️ Selecione o Modo de Estudo")
+# Nova opção adicionada no menu dinâmico
+modo_selecionado = st.sidebar.radio(
+    "Ambiente:", 
+    ["📖 Área de Treino (Geral)", "🎯 Treino por Tópico (Focado)", "⏱️ Simulado LPI (Prova Real 40 Q)"]
+)
 
 def enviar_email_seguro(destinatario, assunto, relatorio):
     try:
@@ -64,12 +72,12 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
     except Exception:
         pass
 
-# --- MODO 1: ÁREA DE TREINAMENTO ---
-if modo_selecionado == "📖 Área de Treino (Fixação)":
+# --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
+if modo_selecionado == "📖 Área de Treino (Geral)":
     st.title("📖 Área de Treino e Fixação Técnica")
-    st.write("Estude sem pressão. Responda e marque a caixa para ver a correção na hora com a explicação técnica.")
+    st.write("Estude todas as questões misturadas sem pressão de tempo.")
 
-    aba_treino, aba_rank_treino = st.tabs(["🎯 Exercícios de Fixação", "🏆 Placar de Líderes (Treino)"])
+    aba_treino, aba_rank_treino = st.tabs(["🎯 Exercícios", "🏆 Líderes (Treino)"])
 
     with aba_treino:
         acertos_treino = 0
@@ -92,20 +100,86 @@ if modo_selecionado == "📖 Área de Treino (Fixação)":
             else:
                 score = (acertos_treino / len(st.session_state.questoes_treino)) * 100
                 st.session_state.ranking_treino[nome_usuario] = max(score, st.session_state.ranking_treino.get(nome_usuario, 0))
-                st.success("Progresso salvo com sucesso!")
+                st.success("Progresso salvo!")
                 time.sleep(0.5)
                 st.rerun()
 
     with aba_rank_treino:
-        st.subheader("🏆 Melhores Pontuações na Área de Estudos")
         if st.session_state.ranking_treino:
-            ranking_ordenado = sorted(st.session_state.ranking_treino.items(), key=lambda x: x[1], reverse=True)
+            ranking_ordenado = sorted(st.session_state.ranking_treino.items(), key=lambda x: x, reverse=True)
             for pos, (user, pt) in enumerate(ranking_ordenado, start=1):
                 st.write(f"**{pos}º Lugar:** {user} — Aproveitamento de `{pt:.1f}%`")
         else:
             st.info("Nenhum registro ainda.")
 
-# --- MODO 2: SIMULADO REAL ---
+# --- NOVO MODO: TREINO POR TÓPICO E QTD PERSONALIZADA ---
+elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
+    st.title("🎯 Bateria de Exercícios por Assunto")
+    st.write("Foque seus estudos! Escolha o assunto específico e a quantidade exata de questões que deseja resolver.")
+
+    aba_filtro, aba_rank_filtro = st.tabs(["⚡ Configurar e Responder", "🏆 Líderes (Treino Focado)"])
+
+    with aba_filtro:
+        # Extrai dinamicamente todos os tópicos únicos do banco de dados
+        topicos_disponiveis = sorted(list(set(q['topico'] for q in QUESTOES_POOL)))
+        topicos_disponiveis.insert(0, "Todos os Assuntos")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            assunto_escolhido = st.selectbox("📚 Escolha o Assunto:", topicos_disponiveis)
+        with col2:
+            qtd_escolhida = st.selectbox("🔢 Quantidade de Questões:", [10, 20, 30, 40])
+
+        # Filtra o banco baseado no assunto selecionado
+        if assunto_escolhido == "Todos os Assuntos":
+            pool_filtrado = list(QUESTOES_POOL)
+        else:
+            pool_filtrado = [q for q in QUESTOES_POOL if q['topico'] == assunto_escolhido]
+
+        # Embaralha e limita ao tamanho escolhido pelo usuário ou ao máximo disponível
+        random.shuffle(pool_filtrado)
+        questoes_bateria = pool_filtrado[:min(qtd_escolhida, len(pool_filtrado))]
+
+        st.caption(f"Exibindo {len(questoes_bateria)} questões exclusivas sobre '{assunto_escolhido}'.")
+        st.divider()
+
+        acertos_focados = 0
+        for idx, q in enumerate(questoes_bateria):
+            st.markdown(f"**Questão {idx+1} [{q['topico']}]:** {q['pergunta']}")
+            resp_focada = st.radio("Sua resposta:", q['opcoes'], key=f"foco_{q['id']}_{idx}", index=None)
+            
+            # Validação instantânea e comentada para fixação
+            if st.checkbox("💡 Corrigir e Ver Comentário", key=f"fococheck_{q['id']}_{idx}"):
+                if resp_focada == q['correta']:
+                    st.success(f"✅ Correto! Resposta: {q['correta']}")
+                    acertos_focados += 1
+                else:
+                    st.error(f"❌ Incorreto. Resposta certa: {q['correta']}")
+                st.info(f"📘 **Comentário Técnico:** {q['explicacao']}")
+            st.divider()
+
+        if st.button("🏁 Registrar Pontuação da Bateria", type="primary"):
+            if not nome_usuario:
+                st.warning("⚠️ Insira seu nome na barra lateral para registrar no placar!")
+            elif len(questoes_bateria) == 0:
+                st.error("Nenhuma questão resolvida.")
+            else:
+                score_focado = (acertos_focados / len(questoes_bateria)) * 100
+                st.session_state.ranking_topico[nome_usuario] = max(score_focado, st.session_state.ranking_topico.get(nome_usuario, 0))
+                st.success("Nota salva no ranking focado!")
+                time.sleep(0.5)
+                st.rerun()
+
+    with aba_rank_filtro:
+        st.subheader("🏆 Placar de Aproveitamento - Filtro por Assunto")
+        if st.session_state.ranking_topico:
+            r_t_ord = sorted(st.session_state.ranking_topico.items(), key=lambda x: x, reverse=True)
+            for pos, (user, pt) in enumerate(r_t_ord, start=1):
+                st.write(f"**{pos}º Lugar:** {user} — Melhor aproveitamento: `{pt:.1f}%`")
+        else:
+            st.info("Nenhum registro nesta categoria ainda.")
+
+# --- MODO 3: SIMULADO PROVA REAL ---
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
     st.title("⏱️ Simulado Oficial Linux Essentials")
     st.write("Simulação fiel: **40 Questões**, limite de **60 minutos** e gabarito apenas após a entrega.")
@@ -144,34 +218,3 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
         if st.button("🏁 Entregar Caderno de Questões", type="primary", disabled=st.session_state.simulado_entregue):
             if not nome_usuario:
-                st.error("⚠️ Insira seu nome na barra lateral esquerda antes de entregar!")
-            else:
-                st.session_state.simulado_entregue = True
-                acertos = sum(1 for i, q in enumerate(st.session_state.questoes_simulado) if st.session_state.respostas_simulado.get(f"q_{i}") == q['correta'])
-                
-                porcentagem_acertos = acertos / 40
-                pontuacao_lpi = int(200 + (porcentagem_acertos * 600))
-                status = "🟢 APROVADO" if pontuacao_lpi >= 500 else "🔴 REPROVADO"
-
-                st.session_state.ranking_simulado[nome_usuario] = max(pontuacao_lpi, st.session_state.ranking_simulado.get(nome_usuario, 0))
-
-                if email_usuario:
-                    rel_corpo = f"Boletim Oficial do Simulado Linux Essentials\nNome: {nome_usuario}\nPontuação Final: {pontuacao_lpi} pontos de 800\nResultado: {status}"
-                    enviar_email_seguro(email_usuario, f"Resultado Simulado Linux - {pontuacao_lpi} Pontos", rel_corpo)
-                st.rerun()
-
-    with aba_rank_simulado:
-        st.subheader("🏆 Quadro Geral de Notas do Exame Oficial (Escala LPI 200-800)")
-        if st.session_state.ranking_simulado:
-            rank_sim_ordenado = sorted(st.session_state.ranking_simulado.items(), key=lambda x: x[1], reverse=True)
-            for pos, (user, pontos) in enumerate(rank_sim_ordenado, start=1):
-                medalha = "🥇" if pos == 1 else "🥈" if pos == 2 else "🥉" if pos == 3 else "🎖️"
-                sel_status = "🟢 APROVADO" if pontos >= 500 else "🔴 REPROVADO"
-                st.markdown(f"### {medalha} **{pos}º Lugar:** {user} — `{pontos} pontos` ({sel_status})")
-
-        if st.button("🔄 Reiniciar e Gerar Novo Simulado"):
-            st.session_state.questoes_simulado = gerar_40_questoes()
-            st.session_state.respostas_simulado = {}
-            st.session_state.simulado_entregue = False
-            st.session_state.tempo_inicio_simulado = time.time()
-            st.rerun()
