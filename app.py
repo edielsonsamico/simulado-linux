@@ -69,7 +69,19 @@ QUESTOES_POOL = [
         "opcoes": ["mkdir", "newdir", "md", "create -d"], "correta": "mkdir",
         "explicacao": "O comando 'mkdir' (make directory) é a ferramenta padrão POSIX para criação de novas pastas."
     }
-]
+# CONEXÃO AUTOMÁTICA COM O BANCO DE DADOS EM NUVEM
+# Usando st.experimental_connection se o KV falhar, ou fallback local estável
+if "ranking_lpi" not in st.session_state:
+    try:
+        # Tenta conectar ao banco de dados interno da nuvem de forma direta
+        db_conn = st.connection("ranking_db", type="dict")
+        st.session_state.ranking_lpi = db_conn
+    except Exception:
+        # Se rodar offline no seu PC, ele salva na memória local
+        st.session_state.ranking_lpi = st.session_state.get("ranking_local_backup", {})
+
+db = {"ranking_lpi": st.session_state.ranking_lpi}
+
 
 # Conexão com o banco de dados local temporário para a versão offline
 if "ranking_local" not in st.session_state:
