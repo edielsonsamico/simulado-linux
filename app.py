@@ -127,8 +127,8 @@ if 'respostas_simulado' not in st.session_state:
     st.session_state.respostas_simulado = {}
 if 'simulado_entregue' not in st.session_state:
     st.session_state.simulado_entregue = False
-if 'tempo_inicio_simulado' not in st.session_state:
-    st.session_state.tempo_inicio_simulado = None
+if 'tempo_limite_simulado' not in st.session_state:
+    st.session_state.tempo_limite_simulado = None
 
 # ==========================================
 # 5. CONTROLES DA BARRA LATERAL
@@ -231,97 +231,108 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
     st.title("⏱️ Simulado Preparatório LPI")
     
-    if not st.session_state.tempo_inicio_simulado:
-        st.session_state.tempo_inicio_simulado = time.time()
-
-    questoes_simulado = st.session_state.questoes_simulado
-    
-    if not st.session_state.simulado_entregue:
-        st.write("Regras da Prova: O gabarito e as explicações só aparecem após o envio definitivo.")
-        
-        for idx, q in enumerate(questoes_simulado):
-            st.markdown(f"##### {idx + 1}. {q['pergunta']}")
-            
-            resposta = st.radio(
-                f"Escolha para a Q{idx + 1}:",
-                q['opcoes'],
-                index=None,
-                key=f"simulado_q_{q['id']}",
-                label_visibility="collapsed"
-            )
-            if resposta:
-                st.session_state.respostas_simulado[q['id']] = resposta
-            st.divider()
-
-        # CONDIÇÕES DE VALIDAÇÃO ANTES DE ENTREGAR
-        total_respondidas = len(st.session_state.respostas_simulado)
-        total_necessarias = len(questoes_simulado)
-        
-        if st.button("📥 Entregar Simulado e Gerar Nota", type="primary"):
-            if not nome_usuario:
-                st.error("🛑 Erro: Identificação necessária! Digite o seu **Nome** na barra lateral para registrar sua participação no placar.")
-            elif total_respondidas < total_necessarias:
-                st.error(f"⚠️ Atenção: Você não pode entregar o simulado incompleto! Respondeu apenas **{total_respondidas} de {total_necessarias}** questões.")
-            else:
-                st.session_state.simulado_entregue = True
-                st.rerun()
-
+    # TRAVA PRINCIPAL: Obriga preenchimento do Nome antes de ver a prova
+    if not nome_usuario:
+        st.warning("👤 Por favor, insira seu **Nome** na barra lateral esquerda para iniciar o Simulado.")
     else:
-        tempo_total = round(time.time() - st.session_state.tempo_inicio_simulado)
-        minutos = tempo_total // 60
-        segundos = tempo_total % 60
+        # Define tempo de prova: 60 minutos (3600 segundos)
+        DURACAO_PROVA = 3600 
         
-        pontuacao = 0
-        relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\nAluno: {nome_usuario}\nTempo de Prova: {minutos}m {segundos}s\n\n"
-        
-        st.subheader("📊 Resultado Geral da Prova")
-        
-        for idx, q in enumerate(questoes_simulado):
-            resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
-            if resp_aluno == q['correta']:
-                pontuacao += 1
-                status = "CORRETA"
-            else:
-                status = "INCORRETA"
-                
-            relatorio_texto += f"Q{idx+1}: {status} (Escolheu: {resp_aluno} | Correta: {q['correta']})\n"
+        if not st.session_state.tempo_limite_simulado:
+            st.session_state.tempo_limite_simulado = time.time() + DURACAO_PROVA
 
-        percentual = (pontuacao / len(questoes_simulado)) * 100
+        tempo_restante = int(st.session_state.tempo_limite_simulado - time.time())
+
+        # MONITOR DE TEMPO E AUTO-ENVIO
+        if tempo_restante <= 0 and not st.session_state.simulado_entregue:
+            st.session_state.simulado_entregue = True
+            st.error("⏰ O tempo acabou! Seu simulado foi encerrado e computado automaticamente.")
+            st.rerun()
+
+        questoes_simulado = st.session_state.questoes_simulado
         
-        if percentual >= 70:
-            st.balloons()
-            st.success(f"🎉 **Aprovado!** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
-            if nome_usuario:
-                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Aprovado)"
-        else:
-            st.error(f"📉 **Abaixo da meta de 70%.** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
-            if nome_usuario:
-                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Recuperação)"
+        if not st.session_state.simulado_entregue:
+            # Renderização do Relógio do topo
+            mins, segs = divmod(tempo_restante, 60)
+            st.metric(label="⏳ Tempo Restante de Prova", value=f"{mins:02d}m {segs:02d}s")
             
-        st.metric(label="Tempo Decorrido", value=f"{minutos}m {segundos}s")
+            # Alerta de 5 Minutos Restantes
+            if tempo_restante <= 300:
+                st.warning("⚠️ **Atenção Aluno!** Faltam menos de 5 minutos para o encerramento automático da sua prova!")
+                
+            st.write("---")
 
-        with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
+            for idx, q in enumerate(questoes_simulado):
+                st.markdown(f"##### {idx + 1}. {q['pergunta']}")
+                
+                resposta = st.radio(
+                    f"Escolha para a Q{idx + 1}:",
+                    q['opcoes'],
+                    index=None,
+                    key=f"simulado_q_{q['id']}",
+                    label_visibility="collapsed"
+                )
+                if resposta:
+                    st.session_state.respostas_simulado[q['id']] = resposta
+                st.divider()
+
+            total_respondidas = len(st.session_state.respostas_simulado)
+            total_necessarias = len(questoes_simulado)
+            
+            if st.button("📥 Entregar Simulado e Gerar Nota", type="primary"):
+                if total_respondidas < total_necessarias:
+                    st.error(f"⚠️ Incompleto: Você precisa responder todas as questões! Preencheu **{total_respondidas} de {total_necessarias}**.")
+                else:
+                    st.session_state.simulado_entregue = True
+                    st.rerun()
+
+        else:
+            # EXIBIÇÃO DE RESULTADOS PÓS-PROVA
+            pontuacao = 0
+            relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\nAluno: {nome_usuario}\n\n"
+            
+            st.subheader("📊 Resultado Geral da Prova")
+            
             for idx, q in enumerate(questoes_simulado):
                 resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
                 if resp_aluno == q['correta']:
-                    st.write(f"✅ **{idx+1}. {q['pergunta']}**")
+                    pontuacao += 1
+                    status = "CORRETA"
                 else:
-                    st.write(f"❌ **{idx+1}. {q['pergunta']}**")
-                st.write(f"Sua resposta: *{resp_aluno}* | Resposta certa: **{q['correta']}**")
-                st.info(f"Explicação: {q['explicacao']}")
-                st.divider()
+                    status = "INCORRETA"
+                relatorio_texto += f"Q{idx+1}: {status} (Escolheu: {resp_aluno} | Correta: {q['correta']})\n"
 
-        # O e-mail só é enviado se o usuário tiver preenchido o campo de e-mail opcional
-        if email_usuario and nome_usuario:
-            relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
-            enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
+            percentual = (pontuacao / len(questoes_simulado)) * 100
+            
+            if percentual >= 70:
+                st.balloons()
+                st.success(f"🎉 **Aprovado!** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Aprovado)"
+            else:
+                st.error(f"📉 **Abaixo da meta de 70%.** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Recuperação)"
 
-        if st.button("🔄 Refazer Novo Simulado"):
-            st.session_state.questoes_simulado = gerar_40_questoes()
-            st.session_state.respostas_simulado = {}
-            st.session_state.simulado_entregue = False
-            st.session_state.tempo_inicio_simulado = None
-            st.rerun()
+            with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
+                for idx, q in enumerate(questoes_simulado):
+                    resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
+                    if resp_aluno == q['correta']:
+                        st.write(f"✅ **{idx+1}. {q['pergunta']}**")
+                    else:
+                        st.write(f"❌ **{idx+1}. {q['pergunta']}**")
+                    st.write(f"Sua resposta: *{resp_aluno}* | Resposta certa: **{q['correta']}**")
+                    st.info(f"Explicação: {q['explicacao']}")
+                    st.divider()
+
+            if email_usuario:
+                relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
+                enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
+
+            if st.button("🔄 Refazer Novo Simulado"):
+                st.session_state.questoes_simulado = gerar_40_questoes()
+                st.session_state.respostas_simulado = {}
+                st.session_state.simulado_entregue = False
+                st.session_state.tempo_limite_simulado = None
+                st.rerun()
 
 # --- RANKING E PLACAR LIDERES NA BARRA LATERAL ---
 st.sidebar.divider()
