@@ -91,6 +91,9 @@ QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 # ==========================================
 preguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
 
+# Atribui IDs únicos sequenciais às novas perguntas importadas dos arquivos para evitar colisões
+proximo_id = max([q.get("id", 100) for q in QUESTOES_POOL]) + 1
+
 for i in range(101, 111):
     try:
         modulo = __import__(f"topico{i}")
@@ -100,12 +103,15 @@ for i in range(101, 111):
                 pergunta_norm = normalizar_texto(q["pergunta"])
                 if pergunta_norm not in preguntas_existentes:
                     preguntas_existentes.add(pergunta_norm)
-                    QUESTOES_POOL.append(q)
+                    # Copia para não modificar o objeto original do import
+                    q_copia = q.copy()
+                    if "id" not in q_copia:
+                        q_copia["id"] = proximo_id
+                        proximo_id += 1
+                    QUESTOES_POOL.append(q_copia)
     except ModuleNotFoundError:
-        # Se o ficheiro de tópico não existir, ignora de forma silenciosa e continua
         pass
     except Exception:
-        # Previne erros no caso de o ficheiro existir mas ter falhas de sintaxe
         pass
 
 
@@ -200,7 +206,6 @@ if 'questoes_treino' not in st.session_state:
     random.shuffle(questoes_copia)
     st.session_state.questoes_treino = questoes_copia
 
-# Agora esta função já foi declarada e pode ser executada sem NameError!
 if 'questoes_simulado' not in st.session_state:
     st.session_state.questoes_simulado = gerar_40_questoes()
 
@@ -296,22 +301,25 @@ elif modo_selecionado == "📖 Área de Treino (Geral)":
     total_acertos_treino = 0
 
     for idx, q in enumerate(questoes_treino):
+        q_id = q.get("id", idx)
         st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
         st.markdown(f"**{q['pergunta']}**")
         
-        hash_pergunta = str(hash(q['pergunta']))
-        chave_resposta = f"treino_{hash_pergunta}"
+        # Chave absolutamente única baseada no modo, índice e ID interno da questão
+        chave_resposta = f"treino_resp_{q_id}"
+        chave_widget = f"widget_treino_{idx}_{q_id}"
         
         indice_padrao = None
         if chave_resposta in st.session_state.respostas_treino_salvas:
-            if st.session_state.respostas_treino_salvas[chave_resposta] in q['opcoes']:
-                indice_padrao = q['opcoes'].index(st.session_state.respostas_treino_salvas[chave_resposta])
+            salva = st.session_state.respostas_treino_salvas[chave_resposta]
+            if salva in q['opcoes']:
+                indice_padrao = q['opcoes'].index(salva)
 
         resposta = st.radio(
             f"Selecione a opção da Questão {idx + 1}:",
             q['opcoes'],
             index=indice_padrao,
-            key=f"radio_treino_{idx}_{hash_pergunta}"
+            key=chave_widget
         )
         
         st.session_state.respostas_treino_salvas[chave_resposta] = resposta
@@ -344,15 +352,18 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     total_acertos_topico = 0
     
     for idx, q in enumerate(questoes_filtradas):
+        q_id = q.get("id", idx)
         st.markdown(f"### Questão {idx + 1}")
         st.markdown(f"**{q['pergunta']}**")
         
-        hash_pergunta = str(hash(q['pergunta']))
+        # Chave de widget única
+        chave_widget = f"widget_topico_{idx}_{q_id}"
+        
         resposta = st.radio(
             f"Opções para a Questão {idx + 1}:",
             q['opcoes'],
             index=None,
-            key=f"radio_topico_{idx}_{hash_pergunta}"
+            key=chave_widget
         )
         
         if resposta:
@@ -401,18 +412,22 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
             st.write("---")
 
             for idx, q in enumerate(questoes_simulado):
+                q_id = q.get("id", idx)
                 st.markdown(f"##### {idx + 1}. {q['pergunta']}")
                 
-                hash_pergunta = str(hash(q['pergunta']))
+                # Chaves robustas para o simulado
+                chave_resposta = f"simulado_resp_{q_id}"
+                chave_widget = f"widget_simulado_{idx}_{q_id}"
+                
                 resposta = st.radio(
                     f"Escolha para a Q{idx + 1}:",
                     q['opcoes'],
                     index=None,
-                    key=f"simulado_q_{idx}_{hash_pergunta}",
+                    key=chave_widget,
                     label_visibility="collapsed"
                 )
                 if resposta:
-                    st.session_state.respostas_simulado[hash_pergunta] = resposta
+                    st.session_state.respostas_simulado[chave_resposta] = resposta
                 st.divider()
 
             total_respondidas = len(st.session_state.respostas_simulado)
@@ -439,8 +454,9 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
             st.subheader("📊 Resultado Geral da Prova")
             
             for idx, q in enumerate(questoes_simulado):
-                hash_pergunta = str(hash(q['pergunta']))
-                resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
+                q_id = q.get("id", idx)
+                chave_resposta = f"simulado_resp_{q_id}"
+                resp_aluno = st.session_state.respostas_simulado.get(chave_resposta, "Não Respondida")
                 if resp_aluno == q['correta']:
                     pontuacao += 1
                     status = "CORRETA"
@@ -460,8 +476,9 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
             with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
                 for idx, q in enumerate(questoes_simulado):
-                    hash_pergunta = str(hash(q['pergunta']))
-                    resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
+                    q_id = q.get("id", idx)
+                    chave_resposta = f"simulado_resp_{q_id}"
+                    resp_aluno = st.session_state.respostas_simulado.get(chave_resposta, "Não Respondida")
                     if resp_aluno == q['correta']:
                         st.write(f"✅ **{idx+1}. {q['pergunta']}**")
                     else:
