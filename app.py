@@ -165,7 +165,7 @@ if "indice_vip" not in st.session_state:
 
 
 # ==========================================
-# 8. BARRA LATERAL (SIDEBAR COM TODAS AS OPÇÕES RESTAURADAS)
+# 8. BARRA LATERAL (SIDEBAR COM TODAS AS OPÇÕES)
 # ==========================================
 num_online, num_visitas = gerenciar_acesso_e_obter_metricas()
 
@@ -220,7 +220,7 @@ elif modo_selecionado == "📖 Área de Treino (Geral)":
                 st.error(f"❌ Incorreta. Certo: **{q['correta']}**")
         st.divider()
 
-# --- ABA: TREINO FOCADO POR TÓPICO (RESTAURADA) ---
+# --- ABA: TREINO FOCADO POR TÓPICO ---
 elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     st.title("🎯 Treino Direcionado por Tópicos")
     topicos_disponiveis = sorted(list(set([q['topico'] for q in QUESTOES_POOL])))
@@ -238,7 +238,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
                 st.error(f"❌ Errado. Correto: **{q['correta']}**")
         st.divider()
 
-# --- ABA: SIMULADO REAL DE 40 QUESTÕES (RESTAURADA) ---
+# --- ABA: SIMULADO REAL DE 40 QUESTÕES ---
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
     st.title("⏱️ Simulado Preparatório Oficial LPI")
     if not nome_usuario:
@@ -270,7 +270,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
         st.success("🎉 Parabéns! Seus conteúdos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns([1, 2])
         
-        # CARD 1: DOWNLOAD DO PDF COM O NOME EXATO PEDIDO
+        # CARD 1: DOWNLOAD DO PDF COM CONCATENAÇÃO SEGURA DE STRINGS
         with col_apostila:
             with st.container(border=True):
                 st.subheader("📚 Apostila de Certificação VIP")
@@ -287,4 +287,54 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             use_container_width=True
                         )
                 else:
-                    st.warning(f"⚠️ O arquivo '{caminho_apost
+                    # CONCATENAÇÃO SEGURA EVITANDO ERROS DE SINTAXE DO INTERPRETADOR
+                    st.warning("⚠️ O arquivo '" + caminho_apostila + "' não foi encontrado. Rode o script de geração primeiro.")
+                st.caption("Download local seguro mantido pela SAMICOIOT.")
+                
+        # CARD 2: SIMULADO VIP COMPLETAMENTE INTERATIVO E PROTEGIDO
+        with col_simulado_vip:
+            with st.container(border=True):
+                st.subheader("🏆 Linux Quiz VIP (Nativo)")
+                st.write("Simulação interativa baseada nos seus tópicos avançados. Fontes originais 100% protegidas contra vazamento ou download.")
+                st.divider()
+                
+                idx = st.session_state.indice_vip
+                total_q = len(QUESTOES_VIP_REPOSITORIO)
+                
+                if idx < total_q:
+                    q_atual = QUESTOES_VIP_REPOSITORIO[idx]
+                    
+                    st.markdown(f"<p style='color: #64748B; font-weight: bold;'>{idx + 1} / {total_q}</p>", unsafe_allow_html=True)
+                    st.markdown(f"#### **{q_atual['pergunta']}**")
+                    
+                    escolha = st.radio(
+                        "Selecione uma alternativa:",
+                        q_atual['opcoes'],
+                        index=None,
+                        key=f"vip_q_{idx}"
+                    )
+                    
+                    st.divider()
+                    col_dica, col_prox = st.columns(2)
+                    
+                    with col_dica:
+                        with st.expander("💡 Ver Dica"):
+                            st.info(q_atual["dica"])
+                            
+                    with col_prox:
+                        if st.button("Próxima Questão ➡️", use_container_width=True, type="primary"):
+                            if escolha:
+                                if escolha == q_atual['correta']:
+                                    st.toast("🎯 Resposta Correta!", icon="✅")
+                                else:
+                                    st.toast("❌ Incorreto!", icon="🚨")
+                                st.session_state.indice_vip += 1
+                                st.rerun()
+                            else:
+                                st.warning("Por favor, selecione uma alternativa antes de avançar.")
+                else:
+                    st.balloons()
+                    st.success("🏆 Sensacional! Você concluiu todas as etapas do Quiz VIP com sucesso!")
+                    if st.button("🔄 Reiniciar Simulado VIP", use_container_width=True):
+                        st.session_state.indice_vip = 0
+                        st.rerun()
