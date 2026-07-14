@@ -5,90 +5,54 @@ from email.mime.multipart import MIMEMultipart
 import random
 import time
 import os
-import glob
 
 # ==========================================
-# -1. SISTEMA DE MONITORIZAÇÃO SEGURO (SEM CONFLITO DE URL)
+# -1. SISTEMA DE MONITORIZAÇÃO EM MEMÓRIA (IMUNE A LOOPS E F5)
 # ==========================================
-PASTA_SESSIONS = ".active_sessions"
-if not os.path.exists(PASTA_SESSIONS):
-    try:
-        os.makedirs(PASTA_SESSIONS)
-    except Exception:
-        pass
 
-def obter_id_unico():
-    """Gera um ID estável na sessão para evitar loops e travamentos de tela."""
+# Usamos st.cache_resource para manter um dicionário global na memória do servidor.
+# Este dicionário persiste entre todos os utilizadores e sobrevive a F5s individuais!
+@st.cache_resource
+def obter_armazenamento_global():
+    return {
+        "usuarios_online": {},  # Estrutura: {usuario_uid: timestamp_atividade}
+        "registro_visitas": set(), # Guarda os UIDs que já visitaram historicamente
+        "visitas_totais": 0
+    }
+
+# Inicializa o armazenamento na memória
+memoria_global = obter_armazenamento_global()
+
+def gerenciar_acesso_e_obter_metricas():
+    # 1. Identifica o utilizador atual na sessão
     if "usuario_uid" not in st.session_state:
-        # Gera uma identificação única baseada no momento do acesso
+        # Gera uma chave única que dura enquanto a aba do navegador estiver aberta
         st.session_state.usuario_uid = f"user_{int(time.time())}_{random.randint(1000, 9999)}"
-    return st.session_state.usuario_uid
-
-# Recupera o identificador seguro
-usuario_uid = obter_id_unico()
-caminho_sessao = os.path.join(PASTA_SESSIONS, f"sess_{usuario_uid}")
-
-# Atualiza apenas o timestamp de atividade (não causa Rerun)
-try:
-    with open(caminho_sessao, "w") as f:
-        f.write(str(time.time()))
-except Exception:
-    pass
-
-def obter_metricas_acesso():
-    """Calcula visitantes únicos e usuários online sem causar loops na interface."""
-    arquivo_visitas = ".visitas_totais"
-    arquivo_log_usuarios = ".registro_usuarios_unicos"
     
-    # 1. Recupera o histórico de visitas totais
-    visitas = 0
-    if os.path.exists(arquivo_visitas):
-        try:
-            with open(arquivo_visitas, "r") as f:
-                conteudo = f.read().strip()
-                visitas = int(conteudo) if conteudo.isdigit() else 0
-        except Exception:
-            pass
-            
-    # Recupera a lista de UIDs que já visitaram historicamente
-    usuarios_registrados = set()
-    if os.path.exists(arquivo_log_usuarios):
-        try:
-            with open(arquivo_log_usuarios, "r") as f:
-                usuarios_registrados = set(f.read().splitlines())
-        except Exception:
-            pass
-
-    # Só conta uma nova visita se for um ID de sessão inédito no servidor
-    if usuario_uid not in usuarios_registrados:
-        usuarios_registrados.add(usuario_uid)
-        visitas += 1
-        try:
-            with open(arquivo_visitas, "w") as f:
-                f.write(str(visitas))
-            with open(arquivo_log_usuarios, "a") as f:
-                f.write(usuario_uid + "\n")
-        except Exception:
-            pass
-
-    # 2. Usuários Online Agora (Baseado em atividade nos últimos 90 segundos)
+    uid_atual = st.session_state.usuario_uid
     agora = time.time()
-    limite_inatividade = 90  
-    online = 0
     
-    if os.path.exists(PASTA_SESSIONS):
-        arquivos = glob.glob(os.path.join(PASTA_SESSIONS, "sess_*"))
-        for arq in arquivos:
-            try:
-                mtime = os.path.getmtime(arq)
-                if agora - mtime < limite_inatividade:
-                    online += 1
-                else:
-                    # Remove arquivos órfãos de sessões abandonadas
-                    os.remove(arq)
-            except Exception:
-                pass
+    # 2. Atualiza o timestamp de atividade deste utilizador na memória global
+    memoria_global["usuarios_online"][uid_atual] = agora
     
-    # Garante que o próprio usuário atual é contado
-    online = max(1, online)
-    return online, visitas
+    # 3. Regista nova visita se for um UID inédito
+    if uid_atual not in memoria_global["registro_visitas"]:
+        memoria_global["registro_visitas"].add(uid_atual)
+        memoria_global["visitas_totais"] += 1
+        
+    # 4. Limpa utilizadores inativos da memória (offline há mais de 45 segundos)
+    limite_inatividade = 45
+    uids_para_remover = []
+    
+    for uid, ultimo_acesso in memoria_global["usuarios_online"].items():
+        if agora - ultimo_acesso > limite_inatividade:
+            uids_para_remover.append(uid)
+            
+    for uid in uids_para_remover:
+        memoria_global["usuarios_online"].pop(uid, None)
+        
+    # Retorna o total de online (mínimo 1) e o total de visitas únicas acumuladas
+    total_online = max(1, len(memoria_global["usuarios_online"]))
+    total_visitas = memoria_global["visitas_totais"]
+    
+    return total_online, total_visitas
