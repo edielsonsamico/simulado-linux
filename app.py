@@ -170,7 +170,7 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
             f"Selecione a opção da Questão {idx + 1}:",
             q['opcoes'],
             index=indice_padrao,
-            key=f"radio_treino_{q['id']}"
+            key=f"radio_treino_{idx}_{q['id']}"  # <--- Corrigido com idx
         )
         
         st.session_state.respostas_treino_salvas[chave_resposta] = resposta
@@ -210,7 +210,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             f"Opções para a Questão {idx + 1}:",
             q['opcoes'],
             index=None,
-            key=f"radio_topico_{q['id']}"
+            key=f"radio_topico_{idx}_{q['id']}"  # <--- Corrigido com idx
         )
         
         if resposta:
@@ -269,7 +269,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                     f"Escolha para a Q{idx + 1}:",
                     q['opcoes'],
                     index=None,
-                    key=f"simulado_q_{q['id']}",
+                    key=f"simulado_q_{idx}_{q['id']}",  # <--- Corrigido com idx
                     label_visibility="collapsed"
                 )
                 if resposta:
