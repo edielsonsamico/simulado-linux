@@ -6,9 +6,27 @@ import random
 import time
 
 # ==========================================
-# 1. BANCO DE DADOS INTEGRADO
+# 0. FUNÇÃO AUXILIAR DE DESDUPLICAÇÃO
 # ==========================================
-QUESTOES_POOL = [
+def normalizar_texto(texto):
+    """Remove espaços extras e padroniza para evitar duplicados por detalhes de digitação."""
+    return " ".join(texto.strip().lower().split())
+
+def desduplicar_questoes(lista_original):
+    """Retorna uma nova lista sem perguntas repetidas com base no conteúdo textual."""
+    vistas = set()
+    lista_limpa = []
+    for q in lista_original:
+        pergunta_norm = normalizar_texto(q["pergunta"])
+        if pergunta_norm not in vistas:
+            vistas.add(pergunta_norm)
+            lista_limpa.append(q)
+    return lista_limpa
+
+# ==========================================
+# 1. BANCO DE DADOS INTEGRADO (BASE)
+# ==========================================
+QUESTOES_POOL_RAW = [
     {"id": 1, "topico": "Tópico 101: Arquitetura", "pergunta": "Qual comando é utilizado para listar informações detalhadas do chipset e dos componentes no barramento PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci", "explicacao": "O comando lspci varre o barramento PCI do hardware listando controladores, placas e chipsets integrados."},
     {"id": 2, "topico": "Tópico 102: Pacotes", "pergunta": "De acordo com a hierarquia do FHS, qual diretório é destinado a guardar exclusivamente os arquivos de configuração específicos da máquina local?", "opcoes": ["/etc", "/var", "/usr", "/opt"], "correta": "/etc", "explicacao": "O diretório /etc é o local padronizado pelo FHS para armazenar scripts e arquivos de configuração de texto do sistema."},
     {"id": 3, "topico": "Tópico 103: Comandos", "pergunta": "No histórico do interpretador de comandos Bash, qual atalho de token repete imediatamente a execução do último comando utilizado?", "opcoes": ["!!", "!$", "history -r", "ctrl+r"], "correta": "!!", "explicacao": "As duas exclamações '!!' chamam e executam novamente no prompt a linha exata de comando disparada anteriormente."},
@@ -21,16 +39,26 @@ QUESTOES_POOL = [
     {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
 ]
 
+# Inicializa o pool aplicando a desduplicação na base de dados integrada
+QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
+
 # ==========================================
-# 2. CARREGAMENTO DOS ARQUIVOS EXTERNOS
+# 2. CARREGAMENTO DOS ARQUIVOS EXTERNOS (COM FILTRO DE CONTEÚDO)
 # ==========================================
+# Criamos um conjunto de perguntas que já estão no pool para comparação rápida
+perguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
+
 for i in range(101, 111):
     try:
         modulo = __import__(f"topico{i}")
         pool = getattr(modulo, f"POOL_{i}")
         for q in pool:
-            if isinstance(q, dict) and "id" in q and q not in QUESTOES_POOL:
-                QUESTOES_POOL.append(q)
+            if isinstance(q, dict) and "pergunta" in q:
+                pergunta_norm = normalizar_texto(q["pergunta"])
+                # Só adiciona se a pergunta textual for inédita
+                if pergunta_norm not in perguntas_existentes:
+                    perguntas_existentes.add(pergunta_norm)
+                    QUESTOES_POOL.append(q)
     except Exception:
         pass
 
@@ -170,7 +198,7 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
             f"Selecione a opção da Questão {idx + 1}:",
             q['opcoes'],
             index=indice_padrao,
-            key=f"radio_treino_{idx}_{q['id']}"  # <--- Corrigido com idx
+            key=f"radio_treino_{idx}_{q['id']}"
         )
         
         st.session_state.respostas_treino_salvas[chave_resposta] = resposta
@@ -210,7 +238,7 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             f"Opções para a Questão {idx + 1}:",
             q['opcoes'],
             index=None,
-            key=f"radio_topico_{idx}_{q['id']}"  # <--- Corrigido com idx
+            key=f"radio_topico_{idx}_{q['id']}"
         )
         
         if resposta:
@@ -269,7 +297,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                     f"Escolha para a Q{idx + 1}:",
                     q['opcoes'],
                     index=None,
-                    key=f"simulado_q_{idx}_{q['id']}",  # <--- Corrigido com idx
+                    key=f"simulado_q_{idx}_{q['id']}",
                     label_visibility="collapsed"
                 )
                 if resposta:
