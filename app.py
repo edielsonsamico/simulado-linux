@@ -6,10 +6,9 @@ import random
 import time
 import os
 import glob
-from streamlit.web.server.websocket_headers import _get_websocket_headers
 
 # ==========================================
-# -1. SISTEMA DE MONITORAMENTO EM TEMPO REAL (IMUNE A F5)
+# -1. SISTEMA DE MONITORIZAÇÃO EM TEMPO REAL (TOTALMENTE IMUNE A F5)
 # ==========================================
 PASTA_SESSIONS = ".active_sessions"
 if not os.path.exists(PASTA_SESSIONS):
@@ -18,28 +17,34 @@ if not os.path.exists(PASTA_SESSIONS):
     except Exception:
         pass
 
-def obter_assinatura_usuario():
-    """Gera uma chave única baseada no IP e Navegador do aluno para evitar duplicados no F5."""
-    try:
-        headers = _get_websocket_headers()
-        # Captura o IP real do usuário através do proxy do Streamlit Cloud
-        ip = headers.get("X-Forwarded-For", "127.0.0.1").split(",")[0].strip()
-        # Captura a assinatura do navegador (User-Agent)
-        user_agent = headers.get("User-Agent", "unknown_browser")
-        # Cria um identificador único e limpo para este computador/dispositivo
-        uid = f"{ip}_{hash(user_agent)}"
-        return uid
-    except Exception:
-        # Fallback caso ocorra erro ao ler os cabeçalhos em ambiente de desenvolvimento local
-        if "fallback_uid" not in st.session_state:
-            st.session_state.fallback_uid = f"local_{random.randint(100000, 999900)}"
-        return st.session_state.fallback_uid
+def obter_ou_criar_uid_usuario():
+    """
+    Recupera o UID do utilizador através dos Query Params da URL.
+    Se não existir, gera um novo, grava na URL e atualiza a aplicação.
+    """
+    # 1. Tenta ler o UID diretamente da URL (sobrevive ao F5)
+    if "uid" in st.query_params:
+        return st.query_params["uid"]
+    
+    # 2. Caso não exista na URL, verifica se já está na sessão ativa (temporário)
+    if "usuario_uid" in st.session_state:
+        # Garante que o UID também vai para a URL para as próximas atualizações
+        st.query_params["uid"] = st.session_state.usuario_uid
+        return st.session_state.usuario_uid
 
-# Identificador único do dispositivo deste aluno (não muda com F5)
-usuario_uid = obter_assinatura_usuario()
+    # 3. Se for um visitante totalmente novo sem UID na URL nem na Sessão:
+    novo_uid = f"user_{random.randint(100000, 999999)}_{int(time.time())}"
+    st.session_state.usuario_uid = novo_uid
+    st.query_params["uid"] = novo_uid
+    
+    # Rerun imediato para garantir que o Streamlit regista o parâmetro na barra de navegação
+    st.rerun()
+
+# Identificador único definitivo do utilizador (gravado na URL do navegador)
+usuario_uid = obter_ou_criar_uid_usuario()
 caminho_sessao = os.path.join(PASTA_SESSIONS, f"sess_{usuario_uid}")
 
-# Atualiza o timestamp de atividade deste usuário específico
+# Atualiza o timestamp de atividade deste utilizador específico
 try:
     with open(caminho_sessao, "w") as f:
         f.write(str(time.time()))
@@ -47,11 +52,11 @@ except Exception:
     pass
 
 def obter_metricas_acesso():
-    """Calcula visitantes únicos e usuários ativos de forma extremamente precisa."""
+    """Calcula visitantes únicos e utilizadores online com precisão absoluta."""
     arquivo_visitas = ".visitas_totais"
-    arquivo_log_usuarios = ".registro_usuarios_unicos" # Guarda os UIDs que já visitaram
+    arquivo_log_usuarios = ".registro_usuarios_unicos" # Guarda os UIDs históricos
     
-    # 1. Recupera as visitas salvas
+    # 1. Recupera o total de visitas salvas
     visitas = 0
     if os.path.exists(arquivo_visitas):
         try:
@@ -61,7 +66,7 @@ def obter_metricas_acesso():
         except Exception:
             pass
             
-    # Recupera a lista de dispositivos (UIDs) que já foram computados historicamente
+    # Recupera a lista de UIDs que já visitaram historicamente
     usuarios_registrados = set()
     if os.path.exists(arquivo_log_usuarios):
         try:
@@ -70,7 +75,7 @@ def obter_metricas_acesso():
         except Exception:
             pass
 
-    # Se o dispositivo atual nunca visitou a página antes, registra como visita nova
+    # Se este UID na URL nunca foi registado antes, conta como uma visita nova
     if usuario_uid not in usuarios_registrados:
         usuarios_registrados.add(usuario_uid)
         visitas += 1
@@ -82,24 +87,25 @@ def obter_metricas_acesso():
         except Exception:
             pass
 
-    # 2. Usuários Online Agora (Sessões ativas que interagiram nos últimos 60 segundos)
+    # 2. Utilizadores Online Agora (Sessões que interagiram nos últimos 45 segundos)
     agora = time.time()
-    limite_inatividade = 60  # Reduzido para 60 segundos para maior precisão de "Tempo Real"
+    limite_inatividade = 45  # Tempo de tolerância curto e dinâmico
     online = 0
     
     if os.path.exists(PASTA_SESSIONS):
         arquivos = glob.glob(os.path.join(PASTA_SESSIONS, "sess_*"))
         for arq in arquivos:
             try:
+                # Verifica a última modificação do ficheiro
                 mtime = os.path.getmtime(arq)
                 if agora - mtime < limite_inatividade:
                     online += 1
                 else:
-                    # Limpa registros inativos antigos
+                    # Limpa automaticamente sessões antigas/abandonadas
                     os.remove(arq)
             except Exception:
                 pass
     
-    # Garante que o próprio usuário atual sempre conte como pelo menos 1 online
+    # Garante que pelo menos o utilizador atual é contabilizado
     online = max(1, online)
     return online, visitas
