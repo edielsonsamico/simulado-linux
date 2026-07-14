@@ -65,7 +65,7 @@ def desduplicar_questoes(lista_original):
 
 
 # ==========================================
-# 3. BANCO DE DADOS INTEGRADO (TREINO E SIMULADO GERAL)
+# 3. BANCO DE DADOS INTEGRADO (BASE INICIAL)
 # ==========================================
 QUESTOES_POOL_RAW = [
     {"id": 1, "topico": "Tópico 101: Arquitetura", "pergunta": "Qual comando é utilizado para listar informações detalhadas do chipset e dos componentes no barramento PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci", "explicacao": "O comando lspci varre o barramento PCI do hardware listando controladores, placas e chipsets integrados."},
@@ -82,9 +82,34 @@ QUESTOES_POOL_RAW = [
 
 QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 
+# ==========================================
+# 4. CARREGAMENTO DINÂMICO DOS ARQUIVOS EXTERNOS (TÓPICOS 101-110)
+# ==========================================
+preguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
+proximo_id = max([q.get("id", 100) for q in QUESTOES_POOL]) + 1 if QUESTOES_POOL else 101
+
+for i in range(101, 111):
+    try:
+        modulo = __import__(f"topico{i}")
+        pool = getattr(modulo, f"POOL_{i}")
+        for q in pool:
+            if isinstance(q, dict) and "pergunta" in q:
+                pergunta_norm = normalizar_texto(q["pergunta"])
+                if pergunta_norm not in preguntas_existentes:
+                    preguntas_existentes.add(pergunta_norm)
+                    q_copia = q.copy()
+                    if "id" not in q_copia:
+                        q_copia["id"] = proximo_id
+                        proximo_id += 1
+                    QUESTOES_POOL.append(q_copia)
+    except ModuleNotFoundError:
+        pass
+    except Exception:
+        pass
+
 
 # ==========================================
-# 4. REPOSITÓRIO EXCLUSIVO DO QUIZ VIP (PROTEGIDO)
+# 5. REPOSITÓRIO EXCLUSIVO DO QUIZ VIP (PROTEGIDO)
 # ==========================================
 QUESTOES_VIP_REPOSITORIO = [
     {
@@ -117,16 +142,17 @@ QUESTOES_VIP_REPOSITORIO = [
 
 
 # ==========================================
-# 5. FUNÇÕES DE SUPORTE DO SIMULADO
+# 6. FUNÇÃO GERADORA DE SIMULADO DINÂMICO (SEM DUPLICADOS)
 # ==========================================
-def gerar_40_questoes():
-    caderno = list(QUESTOES_POOL)
-    random.shuffle(caderno)
-    return caderno[:min(40, len(caderno))]
+def gerar_40_questoes_aleatorias():
+    # Garante seleção aleatória sem repetição do pool completo de questões carregadas
+    pool_disponivel = list(QUESTOES_POOL)
+    tamanho_simulado = min(40, len(pool_disponivel))
+    return random.sample(pool_disponivel, k=tamanho_simulado)
 
 
 # ==========================================
-# 6. CONFIGURAÇÃO DA INTERFACE & ESTILO CSS
+# 7. CONFIGURAÇÃO DA INTERFACE & ESTILO CSS
 # ==========================================
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
@@ -152,12 +178,22 @@ st.markdown("""
 
 
 # ==========================================
-# 7. INICIALIZAÇÃO DO ESTADO DA SESSÃO
+# 8. INICIALIZAÇÃO DO ESTADO DA SESSÃO (SESSION STATE)
 # ==========================================
 if 'questoes_treino' not in st.session_state:
     st.session_state.questoes_treino = list(QUESTOES_POOL)
+
+# Inicializadores do simulado
 if 'questoes_simulado' not in st.session_state:
-    st.session_state.questoes_simulado = gerar_40_questoes()
+    st.session_state.questoes_simulado = gerar_40_questoes_aleatorias()
+if 'respostas_simulado' not in st.session_state:
+    st.session_state.respostas_simulado = {}
+if 'simulado_entregue' not in st.session_state:
+    st.session_state.simulado_entregue = False
+if 'inicio_simulado' not in st.session_state:
+    st.session_state.inicio_simulado = None
+
+# Área VIP
 if "vip_liberado" not in st.session_state:
     st.session_state.vip_liberado = False
 if "indice_vip" not in st.session_state:
@@ -165,7 +201,7 @@ if "indice_vip" not in st.session_state:
 
 
 # ==========================================
-# 8. BARRA LATERAL (SIDEBAR COM TODAS AS OPÇÕES)
+# 9. BARRA LATERAL (SIDEBAR)
 # ==========================================
 num_online, num_visitas = gerenciar_acesso_e_obter_metricas()
 
@@ -191,7 +227,7 @@ modo_selecionado = st.sidebar.radio(
 
 
 # ==========================================
-# 9. CONTEÚDO DAS ABAS INTERATIVAS
+# 10. CONTEÚDO DAS ABAS INTERATIVAS
 # ==========================================
 
 # --- ABA: CRÉDITOS ---
@@ -238,19 +274,103 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
                 st.error(f"❌ Errado. Correto: **{q['correta']}**")
         st.divider()
 
-# --- ABA: SIMULADO REAL DE 40 QUESTÕES ---
+# --- ABA: SIMULADO OFICIAL COM CRONÔMETRO ATIVO (CORRIGIDO) ---
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
-    st.title("⏱️ Simulado Preparatório Oficial LPI")
+    st.title("⏱️ Simulado Preparatório Oficial LPI (40 Questões)")
+    
     if not nome_usuario:
-        st.warning("👤 Por favor, adicione o seu nome na barra lateral para registrar o Simulado.")
+        st.warning("👤 Por favor, insira o seu Nome na barra lateral para iniciar o Simulado Oficial.")
     else:
-        st.info("Respondendo ao caderno de provas randômico da plataforma.")
+        # Inicia o temporizador caso ainda não tenha sido criado
+        if st.session_state.inicio_simulado is None:
+            st.session_state.inicio_simulado = time.time()
+            st.session_state.simulado_entregue = False
+            st.session_state.respostas_simulado = {}
+            st.session_state.questoes_simulado = gerar_40_questoes_aleatorias()
+
+        # Tempo limite de 60 minutos (3600 segundos)
+        tempo_limite_segundos = 3600
+        decorrido = time.time() - st.session_state.inicio_simulado
+        restante_segundos = max(0, int(tempo_limite_segundos - decorrido))
+        
+        # Formatação do relógio (MM:SS)
+        minutos = restante_segundos // 60
+        segundos = restante_segundos % 60
+        
+        # Renderização do Painel de Controle e Tempo do Simulado
+        col_relogio, col_status = st.columns([1, 2])
+        with col_relogio:
+            if restante_segundos > 0 and not st.session_state.simulado_entregue:
+                st.markdown(f"### ⏳ Tempo Restante: `{minutos:02d}:{segundos:02d}`")
+                # Botão invisível para forçar recarregamento do relógio sem travar o usuário
+                if st.button("🔄 Atualizar Relógio"):
+                    st.rerun()
+            elif restante_segundos <= 0:
+                st.markdown("### 🚨 **TEMPO ESGOTADO!**")
+                st.session_state.simulado_entregue = True
+            else:
+                st.markdown("### 🏁 Simulado Concluído")
+
+        with col_status:
+            st.info("Caderno com 40 questões exclusivas sem repetição. Responda tudo antes de finalizar!")
+
+        st.divider()
+
+        # Renderização das Questões na Tela
+        respostas_atuais = {}
         for idx, q in enumerate(st.session_state.questoes_simulado):
-            st.markdown(f"##### {idx + 1}. {q['pergunta']}")
-            st.radio(f"Opções Q{idx + 1}:", q['opcoes'], index=None, key=f"s_{idx}", label_visibility="collapsed")
+            st.markdown(f"##### **Questão {idx + 1}** | `{q['topico']}`")
+            st.markdown(f"**{q['pergunta']}**")
+            
+            # Recupera resposta antiga do estado caso o usuário atualize a página
+            chave_resposta = f"s_ans_{q['id']}"
+            opcao_selecionada = st.radio(
+                "Alternativas:", 
+                q['opcoes'], 
+                index=None if chave_resposta not in st.session_state.respostas_simulado else q['opcoes'].index(st.session_state.respostas_simulado[chave_resposta]),
+                key=f"sim_radio_{idx}",
+                label_visibility="collapsed"
+            )
+            
+            if opcao_selecionada:
+                st.session_state.respostas_simulado[chave_resposta] = opcao_selecionada
             st.divider()
 
-# --- ABA VIP: MATERIAIS VIP & QUIZ DE 30 QUESTÕES NATIVO ---
+        # Ações de Finalização e Geração de Novo Teste
+        col_entregar, col_resetar = st.columns(2)
+        
+        with col_entregar:
+            if not st.session_state.simulado_entregue:
+                if st.button("🏁 Finalizar e Entregar Simulado", type="primary", use_container_width=True):
+                    st.session_state.simulado_entregue = True
+                    st.rerun()
+            else:
+                # Exibe a nota e o gabarito detalhado apenas após a entrega
+                acertos = 0
+                for q in st.session_state.questoes_simulado:
+                    chave = f"s_ans_{q['id']}"
+                    resp = st.session_state.respostas_simulado.get(chave)
+                    if resp == q['correta']:
+                        acertos += 1
+                
+                percentual = (acertos / len(st.session_state.questoes_simulado)) * 100
+                st.markdown(f"### 🎉 Resultado: **{acertos} / {len(st.session_state.questoes_simulado)} acertos** ({percentual:.1f}%)")
+                if percentual >= 70:
+                    st.success("🏆 Excelente! Você seria aprovado na prova oficial!")
+                else:
+                    st.error("🚨 Você ficou abaixo de 70% de acertos. Continue estudando os tópicos indicados no gabarito.")
+
+        with col_resetar:
+            if st.button("🔄 Gerar Novo Simulado (Inédito)", type="secondary", use_container_width=True):
+                # Limpa estados do simulado e força nova amostragem sem duplicados
+                st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_entregue = False
+                st.session_state.respostas_simulado = {}
+                st.session_state.questoes_simulado = gerar_40_questoes_aleatorias()
+                st.balloons()
+                st.rerun()
+
+# --- ABA VIP: APOSTILAS & QUIZ NATIVO ---
 elif modo_selecionado == "🎁 Materiais VIP & Simulados":
     st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
     st.write("Materiais avançados mantidos pela SAMICOIOT.")
@@ -270,7 +390,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
         st.success("🎉 Parabéns! Seus conteúdos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns([1, 2])
         
-        # CARD 1: DOWNLOAD DO PDF COM CONCATENAÇÃO SEGURA DE STRINGS
+        # CARD 1: DOWNLOAD DO PDF
         with col_apostila:
             with st.container(border=True):
                 st.subheader("📚 Apostila de Certificação VIP")
@@ -287,7 +407,6 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             use_container_width=True
                         )
                 else:
-                    # CONCATENAÇÃO SEGURA EVITANDO ERROS DE SINTAXE DO INTERPRETADOR
                     st.warning("⚠️ O arquivo '" + caminho_apostila + "' não foi encontrado. Rode o script de geração primeiro.")
                 st.caption("Download local seguro mantido pela SAMICOIOT.")
                 
