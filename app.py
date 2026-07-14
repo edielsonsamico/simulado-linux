@@ -68,11 +68,20 @@ def desduplicar_questoes(lista_original):
 
 
 # ==========================================
-# 3. BANCO DE DADOS INTEGRADO (VAZIO - DADOS REMOVIDOS)
+# 3. BANCO DE DADOS INTEGRADO RESTAURADO
 # ==========================================
-# Removidos todos os dados fixos que estavam aqui. 
-# A lista de questões agora é alimentada puramente pelos ficheiros externos importados.
-QUESTOES_POOL_RAW = []
+QUESTOES_POOL_RAW = [
+    {"id": 1, "topico": "Tópico 101: Arquitetura", "pergunta": "Qual comando é utilizado para listar informações detalhadas do chipset e dos componentes no barramento PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci", "explicacao": "O comando lspci varre o barramento PCI do hardware listando controladores, placas e chipsets integrados."},
+    {"id": 2, "topico": "Tópico 102: Pacotes", "pergunta": "De acordo com a hierarquia do FHS, qual diretório é destinado a guardar exclusivamente os arquivos de configuração específicos da máquina local?", "opcoes": ["/etc", "/var", "/usr", "/opt"], "correta": "/etc", "explicacao": "O diretório /etc é o local padronizado pelo FHS para armazenar scripts e arquivos de configuração de texto do sistema."},
+    {"id": 3, "topico": "Tópico 103: Comandos", "pergunta": "No histórico do interpretador de comandos Bash, qual atalho de token repete imediatamente a execução do Classification do último comando utilizado?", "opcoes": ["!!", "!$", "history -r", "ctrl+r"], "correta": "!!", "explicacao": "As duas exclamações '!!' chamam e executam novamente no prompt a linha exata de comando disparada anteriormente."},
+    {"id": 4, "topico": "Tópico 104: Dispositivos", "pergunta": "Qual comando relata em tempo real o espaço livre/disponível e o uso em blocos para todos os sistemas de arquivos atualmente montados?", "opcoes": ["df", "du", "fdisk", "free"], "correta": "df", "explicacao": "O comando df (disk free) lê a tabela de montagens do sistema exibindo capacidades, espaço ocupado e pontos de montagem ativos."},
+    {"id": 5, "topico": "Tópico 105: Scripts e SQL", "pergunta": "Em um script executável em shell Bash, qual comando pausa a execução contínua para ler informações digitadas pelo usuário no teclado?", "opcoes": ["read", "input", "get", "scan"], "correta": "read", "explicacao": "O comando embutido 'read' interrompe o script colhendo os caracteres do fluxo de entrada padrão (stdin) e salvando-os em uma variável."},
+    {"id": 6, "topico": "Tópico 106: Desktops", "pergunta": "Qual é o caminho completo e o nome do arquivo de configuração central responsável por gerenciar os parâmetros de vídeo e entradas do servidor de janelas X11?", "opcoes": ["/etc/X11/xorg.conf", "/etc/X11/x11.conf", "/etc/xorg.conf", "/var/X11/xorg.conf"], "correta": "/etc/X11/xorg.conf", "explicacao": "O arquivo estático /etc/X11/xorg.conf centraliza os módulos de layout, mouses, teclados, placas de vídeo e monitores na arquitetura XOrg clássica."},
+    {"id": 7, "topico": "Tópico 107: Administração", "pergunta": "Qual arquivo confinado abriga de forma criptografada as senhas dos usuários e as regras específicas de expiração de validade da conta?", "opcoes": ["/etc/shadow", "/etc/passwd", "/etc/secure", "/var/shadow"], "correta": "/etc/shadow", "explicacao": "Por motivos de segurança, as hashes de senhas e políticas de obsolescência ficam trancadas no arquivo /etc/shadow com permissões restritas a root."},
+    {"id": 8, "topico": "Tópico 108: Serviços", "pergunta": "O protocolo de sincronização temporal NTP executa o seu tráfego vital por meio de qual porta de rede e protocolo de transporte, respectively?", "opcoes": ["Porta UDP 123", "Porta TCP 123", "Porta UDP 53", "Porta TCP 80"], "correta": "Porta UDP 123", "explicacao": "O Network Time Protocol (NTP) dita a troca estruturada de pacotes de timestamp de tempo sobre datagramas na porta UDP 123."},
+    {"id": 9, "topico": "Tópico 110: Redes", "pergunta": "Na configuração básica e resolução estática sem domínio real de rede externa, qual arquivo mapeia pares de IP e Nome Local no Linux?", "opcoes": ["/etc/hosts", "/etc/resolv.conf", "/etc/networks", "/etc/hostname"], "correta": "/etc/hosts", "explicacao": "O arquivo /etc/hosts associa IPs a nomes locais manualmente, sem depender de servidores DNS."},
+    {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
+]
 
 QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 
@@ -82,7 +91,7 @@ QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 # ==========================================
 preguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
 
-# Atribui IDs únicos sequenciais às novas perguntas importadas dos arquivos para evitar colisões
+# Atribui IDs únicos sequenciais às novas perguntas importadas para evitar colisões
 proximo_id = max([q.get("id", 100) for q in QUESTOES_POOL]) + 1 if QUESTOES_POOL else 101
 
 for i in range(101, 111):
@@ -94,7 +103,6 @@ for i in range(101, 111):
                 pergunta_norm = normalizar_texto(q["pergunta"])
                 if pergunta_norm not in preguntas_existentes:
                     preguntas_existentes.add(pergunta_norm)
-                    # Copia para não modificar o objeto original do import
                     q_copia = q.copy()
                     if "id" not in q_copia:
                         q_copia["id"] = proximo_id
@@ -246,42 +254,44 @@ modo_selecionado = st.sidebar.radio(
 # 9. FLUXO DOS AMBIENTES DE ESTUDO (ÁREA CENTRAL)
 # ==========================================
 
-# --- MODO: CRÉDITOS & DESENVOLVIMENTO ---
+# --- MODO: CRÉDITOS & DESENVOLVIMENTO (DESIGN LIMPO COM COMPONENTES NATIVOS) ---
 if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
     st.title("ℹ️ Créditos & Desenvolvimento")
     st.write("Conheça o desenvolvedor responsável por esta plataforma de estudos e simulados.")
     
-    st.markdown("""
-    <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 30px; border-radius: 12px; margin-top: 20px;">
-        <h2 style="color: #1E3A8A; margin-top: 0px;">Edielson Samico</h2>
-        <p style="font-size: 16px; color: #475569;">
-            Desenvolvedor e entusiasta de tecnologia Linux, infraestrutura e criação de sistemas web interativos.
-        </p>
-        <hr style="border: 0; border-top: 1px dashed #CBD5E1; margin: 20px 0;">
-        <h4 style="color: #0F172A; margin-bottom: 15px;">Entre em contato:</h4>
+    with st.container(border=True):
+        st.subheader("Edielson Samico")
+        st.write("Desenvolvedor e entusiasta de tecnologia Linux, infraestrutura e criação de sistemas web interativos.")
         
-        <div style="display: flex; flex-direction: column; gap: 12px; font-size: 16px;">
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">💬</span>
-                <a href="https://wa.me/5581987316454" target="_blank" style="color: #25D366; font-weight: bold; text-decoration: none;">
-                    WhatsApp (81 98731-6454)
-                </a>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">📸</span>
-                <a href="https://instagram.com/edielsonsamico" target="_blank" style="color: #E1306C; font-weight: bold; text-decoration: none;">
-                    Instagram (@edielsonsamico)
-                </a>
-            </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <span style="font-size: 20px;">🎥</span>
-                <a href="https://youtube.com/@EdielsonSamico" target="_blank" style="color: #FF0000; font-weight: bold; text-decoration: none;">
-                    YouTube (@EdielsonSamico)
-                </a>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        st.divider()
+        st.markdown("### 📞 Entre em contato:")
+        
+        # Colunas e botões nativos que impedem erros visuais
+        col_wa, col_ig, col_yt = st.columns(3)
+        
+        with col_wa:
+            st.link_button(
+                "💬 WhatsApp", 
+                "https://wa.me/5581987316454", 
+                use_container_width=True
+            )
+            st.caption("81 98731-6454")
+            
+        with col_ig:
+            st.link_button(
+                "📸 Instagram", 
+                "https://instagram.com/edielsonsamico", 
+                use_container_width=True
+            )
+            st.caption("@edielsonsamico")
+            
+        with col_yt:
+            st.link_button(
+                "🎥 YouTube", 
+                "https://youtube.com/@EdielsonSamico", 
+                use_container_width=True
+            )
+            st.caption("@EdielsonSamico")
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 elif modo_selecionado == "📖 Área de Treino (Geral)":
@@ -299,7 +309,6 @@ elif modo_selecionado == "📖 Área de Treino (Geral)":
             st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
             st.markdown(f"**{q['pergunta']}**")
             
-            # Chave absolutamente única baseada no modo, índice e ID interno da questão
             chave_resposta = f"treino_resp_{q_id}"
             chave_widget = f"widget_treino_{idx}_{q_id}"
             
@@ -353,7 +362,6 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
             st.markdown(f"### Questão {idx + 1}")
             st.markdown(f"**{q['pergunta']}**")
             
-            # Chave de widget única
             chave_widget = f"widget_topico_{idx}_{q_id}"
             
             resposta = st.radio(
@@ -414,7 +422,6 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 q_id = q.get("id", idx)
                 st.markdown(f"##### {idx + 1}. {q['pergunta']}")
                 
-                # Chaves robustas para o simulado
                 chave_resposta = f"simulado_resp_{q_id}"
                 chave_widget = f"widget_simulado_{idx}_{q_id}"
                 
@@ -425,8 +432,8 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                     key=chave_widget,
                     label_visibility="collapsed"
                 )
-                if resposta:
-                    st.session_state.respostas_simulado[chave_resposta] = resposta
+                if joke := resposta:
+                    st.session_state.respostas_simulado[chave_resposta] = joke
                 st.divider()
 
             total_respondidas = len(st.session_state.respostas_simulado)
@@ -487,7 +494,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                     st.divider()
 
             if email_usuario:
-                relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
+                relatorio_texto += f"\nNota Final: {percentual:.1f}% - Empréstimo: {pontuacao}/{len(questoes_simulado)}"
                 enviar_email_seguro(
                     email_usuario, 
                     f"Resultado Simulado Linux Essentials - {nome_usuario}", 
