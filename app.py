@@ -87,6 +87,16 @@ QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 
 
 # ==========================================
+# 3.5 QUESTÕES DO SIMULADO VIP (CONTEÚDO EXCLUSIVO)
+# ==========================================
+QUESTOES_VIP = [
+    {"id": 501, "topico": "VIP: Comandos Avançados", "pergunta": "Qual combinação de comandos e expressões regulares filtra apenas as linhas de um log que NÃO iniciam com '#' e contêm a palavra 'ERROR'?", "opcoes": ["grep -v '^#' logfile | grep 'ERROR'", "grep '^[^#]' logfile | grep -i 'error'", "egrep '^[^#].*ERROR' logfile", "Todas as anteriores estão corretas"], "correta": "Todas as anteriores estão corretas", "explicacao": "Todas as opções filtram corretamente linhas sem comentários iniciais que contenham a palavra ERROR."},
+    {"id": 502, "topico": "VIP: Rede e Segurança", "pergunta": "Para monitorar pacotes HTTP que trafegam na porta 8080 de uma placa específica eth1 usando tcpdump, qual sintaxe é a correta?", "opcoes": ["tcpdump -i eth1 port 8080", "tcpdump -i eth1 tcp port 8080", "tcpdump -i eth1 -v 'port 8080'", "As alternativas A e B estão corretas"], "correta": "As alternativas A e B estão corretas", "explicacao": "Ambas as expressões 'port 8080' ou 'tcp port 8080' no tcpdump capturam o tráfego desta porta na interface de rede eth1."},
+    {"id": 503, "topico": "VIP: Gerenciamento de Processos", "pergunta": "Como você altera a prioridade (nice) de um processo que já está rodando com PID 1024 para o valor máximo de alta prioridade permitido para usuários normais?", "opcoes": ["renice -n 19 -p 1024", "nice -n -20 -p 1024", "renice -n 0 -p 1024", "renice -n 20 -p 1024"], "correta": "renice -n 0 -p 1024", "explicacao": "Usuários comuns só podem aumentar o valor 'nice' (reduzir prioridade) ou reajustar até o limite de 0. Valores negativos (maior prioridade) exigem privilégios de root."}
+]
+
+
+# ==========================================
 # 4. CARREGAMENTO SEGURO DOS ARQUIVOS EXTERNOS
 # ==========================================
 preguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
@@ -217,6 +227,12 @@ if 'tempo_limite_simulado' not in st.session_state:
 if 'inicio_simulado' not in st.session_state:
     st.session_state.inicio_simulado = None
 
+# Estados de controle para a Área VIP bloqueada
+if "vip_liberado" not in st.session_state:
+    st.session_state.vip_liberado = False
+if "respostas_vip" not in st.session_state:
+    st.session_state.respostas_vip = {}
+
 
 # ==========================================
 # 8. CONFIGURAÇÃO E DESENHO DA BARRA LATERAL (SIDEBAR)
@@ -245,6 +261,7 @@ modo_selecionado = st.sidebar.radio(
         "📖 Área de Treino (Geral)", 
         "🎯 Treino por Tópico (Focado)", 
         "⏱️ Simulado LPI (Prova Real 40 Q)",
+        "🎁 Materiais VIP & Simulados",  # Novo ambiente estratégico!
         "ℹ️ Créditos & Desenvolvimento"
     ]
 )
@@ -254,20 +271,19 @@ modo_selecionado = st.sidebar.radio(
 # 9. FLUXO DOS AMBIENTES DE ESTUDO (ÁREA CENTRAL)
 # ==========================================
 
-# --- MODO: CRÉDITOS & DESENVOLVIMENTO (DESIGN LIMPO COM COMPONENTES NATIVOS E FRASE COMPLETA) ---
+# --- MODO: CRÉDITOS & DESENVOLVIMENTO (FRASE ATUALIZADA) ---
 if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
     st.title("ℹ️ Créditos & Desenvolvimento")
     st.write("Conheça o desenvolvedor responsável por esta plataforma de estudos e simulados.")
     
     with st.container(border=True):
         st.subheader("Edielson Samico")
-        # Frase atualizada com Empresas e Clientes Finais
+        # Frase atualizada para suporte completo e abrangente
         st.write("Desenvolvedor de sistemas e aplicativos, especialista em criação de soluções web interativas, logos, identidades visuais corporativas, análise de tráfego web e suporte tecnológico completo para empresas e clientes finais.")
         
         st.divider()
         st.markdown("### 📞 Entre em contato:")
         
-        # Colunas e botões nativos que impedem erros visuais
         col_wa, col_ig, col_yt = st.columns(3)
         
         with col_wa:
@@ -293,6 +309,93 @@ if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
                 use_container_width=True
             )
             st.caption("@EdielsonSamico")
+
+# --- NOVO MODO: MATERIAIS VIP & SIMULADOS (SOCIAL LOCKER ATIVO) ---
+elif modo_selecionado == "🎁 Materiais VIP & Simulados":
+    st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
+    st.write("Acelere sua aprovação nas certificações resgatando materiais avançados de estudo.")
+
+    if not st.session_state.vip_liberado:
+        # Seção do Bloqueador (Social Locker)
+        with st.container(border=True):
+            st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🔒 Conteúdo Exclusivo Bloqueado</h3>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <p style='text-align: center; font-size: 16px;'>
+                    Para liberar o download da nossa <b>Apostila Preparatória Completa</b> e acessar o <b>Simulado VIP</b>, 
+                    inscreva-se no nosso canal do YouTube! É totalmente gratuito e apoia nosso trabalho.
+                </p>
+                """, 
+                unsafe_allow_html=True
+            )
+            
+            st.divider()
+            
+            col_inscrever, col_liberar = st.columns([2, 1])
+            
+            with col_inscrever:
+                # Canal com o gatilho "?sub_confirmation=1" de inscrição direta
+                st.link_button(
+                    "❤️ 1º Passo: Inscrever-se no Canal", 
+                    "https://youtube.com/@EdielsonSamico?sub_confirmation=1", 
+                    use_container_width=True,
+                    type="primary"
+                )
+                
+            with col_liberar:
+                if st.button("🔓 2º Passo: Liberar Acesso", use_container_width=True):
+                    st.session_state.vip_liberado = True
+                    st.balloons()
+                    st.rerun()
+    else:
+        # Área VIP Liberada!
+        st.success("🎉 Parabéns! Seus conteúdos e recursos VIP estão totalmente desbloqueados.")
+        
+        col_apostila, col_simulado_vip = st.columns(2)
+        
+        with col_apostila:
+            with st.container(border=True):
+                st.subheader("📚 Apostila de Certificação VIP")
+                st.write("Material completo cobrando comandos Linux essenciais, mapas mentais de arquitetura de diretórios e guias de redes.")
+                # Substitua pela URL final do seu PDF no Google Drive, GitHub ou OneDrive
+                st.link_button("📥 Baixar Apostila (PDF)", "https://github.com/EdielsonSamico", use_container_width=True)
+                st.caption("Hospede seu arquivo e substitua o link acima.")
+                
+        with col_simulado_vip:
+            with st.container(border=True):
+                st.subheader("🏆 Simulado VIP de Alta Dificuldade")
+                st.write("Questões selecionadas e comentadas para testar seus limites reais antes da prova de certificação.")
+                
+                # Exibição do Simulado VIP na mesma página
+                st.divider()
+                st.markdown("### 📝 Responder Questões VIP:")
+                
+                total_acertos_vip = 0
+                for idx, q in enumerate(QUESTOES_VIP):
+                    q_id = q["id"]
+                    st.markdown(f"**Q{idx + 1}. {q['pergunta']}**")
+                    
+                    chave_widget = f"widget_vip_{idx}_{q_id}"
+                    
+                    resposta = st.radio(
+                        f"Opções para a VIP Q{idx + 1}:",
+                        q['opcoes'],
+                        index=None,
+                        key=chave_widget,
+                        label_visibility="collapsed"
+                    )
+                    
+                    if resposta:
+                        st.session_state.respostas_vip[str(q_id)] = resposta
+                        if resposta == q['correta']:
+                            st.success("🎯 Resposta Correta!")
+                            total_acertos_vip += 1
+                        else:
+                            st.error(f"❌ Incorreta. A alternativa certa é: **{q['correta']}**")
+                        
+                        with st.expander("📚 Conceito Detalhado"):
+                            st.info(q['explicacao'])
+                    st.write("---")
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 elif modo_selecionado == "📖 Área de Treino (Geral)":
