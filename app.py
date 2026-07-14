@@ -141,4 +141,243 @@ def enviar_email_seguro(destinatario, assunto, relatorio):
         else:
             st.sidebar.warning("⚠️ Sem configuração de e-mail nos Secrets.")
     except Exception as e:
-        st.sidebar.error(f"❌ Erro no e
+        st.sidebar.error(f"❌ Erro no e-mail: {str(e)}")
+
+
+# ==========================================
+# 6. CONFIGURAÇÃO DA INTERFACE & ESTILIZAÇÃO CSS
+# ==========================================
+st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
+
+st.markdown("""
+    <style>
+        div[data-testid="stRadio"] div[role="radiogroup"] label div[data-testid="stMarkdownContainer"] {
+            font-weight: 500 !important;
+            color: #334155 !important;
+            font-size: 16px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label [data-testid="stWidgetCircle"] {
+            border: 2px solid #CBD5E1 !important;
+            background-color: #FFFFFF !important;
+            width: 20px !important;
+            height: 20px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+            background-color: #F8FAFC !important;
+            border-radius: 8px;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] {
+            background-color: #EFF6FF !important; 
+            border: 1px solid #3B82F6 !important; 
+            border-radius: 8px !important;
+            padding: 8px 12px !important;
+        }
+        div[data-testid="stRadio"] div[role="radiogroup"] label[data-checked="true"] div[data-testid="stMarkdownContainer"] {
+            color: #1E40AF !important; 
+            font-weight: 700 !important;
+        }
+        .stCheckbox label {
+            background-color: #EFF6FF !important;
+            padding: 6px 12px !important;
+            border-radius: 6px !important;
+            border: 1px solid #BFDBFE !important;
+            color: #1E40AF !important;
+            font-weight: bold !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
+# ==========================================
+# 7. INICIALIZAÇÃO DO ESTADO DA SESSÃO (SESSION STATE)
+# ==========================================
+if "ranking_treino" not in st.session_state:
+    st.session_state.ranking_treino = {}
+if "ranking_simulado" not in st.session_state:
+    st.session_state.ranking_simulado = {}
+if "ranking_topico" not in st.session_state:
+    st.session_state.ranking_topico = {}
+if "respostas_treino_salvas" not in st.session_state:
+    st.session_state.respostas_treino_salvas = {}
+
+if 'questoes_treino' not in st.session_state:
+    questoes_copia = list(QUESTOES_POOL)
+    random.shuffle(questoes_copia)
+    st.session_state.questoes_treino = questoes_copia
+
+if 'questoes_simulado' not in st.session_state:
+    st.session_state.questoes_simulado = gerar_40_questoes()
+
+if 'respostas_simulado' not in st.session_state:
+    st.session_state.respostas_simulado = {}
+if 'simulado_entregue' not in st.session_state:
+    st.session_state.simulado_entregue = False
+if 'tempo_limite_simulado' not in st.session_state:
+    st.session_state.tempo_limite_simulado = None
+if 'inicio_simulado' not in st.session_state:
+    st.session_state.inicio_simulado = None
+
+# Estados de controle para a Área VIP bloqueada
+if "vip_liberado" not in st.session_state:
+    st.session_state.vip_liberado = False
+
+
+# ==========================================
+# 8. CONFIGURAÇÃO E DESENHO DA BARRA LATERAL (SIDEBAR)
+# ==========================================
+
+num_online, num_visitas = gerenciar_acesso_e_obter_metricas()
+
+col_online, col_visitas = st.sidebar.columns(2)
+with col_online:
+    st.metric(label="🟢 Online Agora", value=num_online)
+with col_visitas:
+    st.metric(label="👥 Visitas Totais", value=num_visitas)
+
+st.sidebar.divider()
+
+st.sidebar.header("👤 Identificação do Aluno")
+nome_usuario = st.sidebar.text_input("Seu Nome para o Placar (Obrigatório):", max_chars=20).strip()
+email_usuario = st.sidebar.text_input("Seu E-mail (Opcional):").strip()
+
+st.sidebar.divider()
+st.sidebar.subheader("🕹️ Selecione o Modo de Estudo")
+
+modo_selecionado = st.sidebar.radio(
+    "Ambiente:", 
+    [
+        "📖 Área de Treino (Geral)", 
+        "🎯 Treino por Tópico (Focado)", 
+        "⏱️ Simulado LPI (Prova Real 40 Q)",
+        "🎁 Materiais VIP & Simulados",
+        "ℹ️ Créditos & Desenvolvimento"
+    ]
+)
+
+
+# ==========================================
+# 9. FLUXO DOS AMBIENTES DE ESTUDO (ÁREA CENTRAL)
+# ==========================================
+
+# --- MODO: CRÉDITOS & DESENVOLVIMENTO ---
+if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
+    st.title("ℹ️ Créditos & Desenvolvimento")
+    st.write("Conheça o desenvolvedor responsável por esta plataforma de estudos e simulados.")
+    
+    with st.container(border=True):
+        st.subheader("Edielson Samico")
+        st.write("Desenvolvedor de sistemas e aplicativos, especialista em criação de soluções web interativas, logos, identidades visuais corporativas, análise de tráfego web e suporte tecnológico completo para empresas e clientes finais.")
+        
+        st.divider()
+        st.markdown("### 📞 Entre em contato:")
+        
+        col_wa, col_ig, col_yt = st.columns(3)
+        
+        with col_wa:
+            st.link_button("💬 WhatsApp", "https://wa.me/5581987316454", use_container_width=True)
+            st.caption("81 98731-6454")
+            
+        with col_ig:
+            st.link_button("📸 Instagram", "https://instagram.com/edielsonsamico", use_container_width=True)
+            st.caption("@edielsonsamico")
+            
+        with col_yt:
+            st.link_button("🎥 YouTube", "https://youtube.com/@EdielsonSamico", use_container_width=True)
+            st.caption("@EdielsonSamico")
+
+# --- MODO: MATERIAIS VIP & SIMULADOS (SOCIAL LOCKER CORRIGIDO) ---
+elif modo_selecionado == "🎁 Materiais VIP & Simulados":
+    st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
+    st.write("Acelere sua aprovação nas certificações resgatando materiais avançados de estudo.")
+
+    if not st.session_state.vip_liberado:
+        with st.container(border=True):
+            st.markdown("<h3 style='text-align: center; color: #1E3A8A;'>🔒 Conteúdo Exclusivo Bloqueado</h3>", unsafe_allow_html=True)
+            st.markdown(
+                """
+                <p style='text-align: center; font-size: 16px;'>
+                    Para liberar o download da nossa <b>Apostila Preparatória Completa</b> e acessar o <b>Simulado VIP</b>, 
+                    inscreva-se no nosso canal do YouTube! É totalmente gratuito e apoia nosso trabalho.
+                </p>
+                """, 
+                unsafe_allow_html=True
+            )
+            st.divider()
+            col_inscrever, col_liberar = st.columns([2, 1])
+            with col_inscrever:
+                st.link_button("❤️ 1º Passo: Inscrever-se no Canal", "https://youtube.com/@EdielsonSamico?sub_confirmation=1", use_container_width=True, type="primary")
+            with col_liberar:
+                if st.button("🔓 2º Passo: Liberar Acesso", use_container_width=True):
+                    st.session_state.vip_liberado = True
+                    st.balloons()
+                    st.rerun() # Linha corrigida de forma segura!
+    else:
+        st.success("🎉 Parabéns! Seus conteúdos e recursos VIP estão totalmente desbloqueados.")
+        col_apostila, col_simulado_vip = st.columns(2)
+        
+        with col_apostila:
+            with st.container(border=True):
+                st.subheader("📚 Apostila de Certificação VIP")
+                st.write("Material completo cobrando comandos Linux essenciais, mapas mentais de arquitetura de diretórios e guias de redes.")
+                st.link_button("📥 Baixar Apostila (PDF)", "https://github.com/EdielsonSamico", use_container_width=True)
+                st.caption("Apostila de 10 páginas configurada com sucesso para a marca SAMICOIOT.")
+                
+        with col_simulado_vip:
+            with st.container(border=True):
+                st.subheader("🏆 Simulado VIP Avançado")
+                st.write("Questões de nível de dificuldade elevado selecionadas e comentadas para testar seus limites reais antes da prova.")
+                st.link_button(
+                    "🚀 Abrir Simulado VIP", 
+                    "https://notebooklm.google.com/notebook/5c438fb6-d069-4b7f-b64c-542d53add525/artifact/f5d7b6b8-9e48-4582-bbe8-e491bb4171c9?utm_source=nlm_web_share&utm_medium=google_oo&utm_campaign=art_share_1&utm_content=&utm_smc=nlm_web_share_google_oo_art_share_1_", 
+                    use_container_width=True,
+                    type="primary"
+                )
+                st.caption("Link externo integrado com sucesso na plataforma SAMICOIOT.")
+
+# --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
+elif modo_selecionado == "📖 Área de Treino (Geral)":
+    st.title("📖 Área de Treino e Fixação Técnica")
+    st.write("Responda às questões abaixo. O feedback é exibido em tempo real para cada questão.")
+
+    if not QUESTOES_POOL:
+        st.info("ℹ️ Nenhuma questão encontrada.")
+    else:
+        for idx, q in enumerate(st.session_state.questoes_treino):
+            st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
+            st.markdown(f"**{q['pergunta']}**")
+            resposta = st.radio(f"Selecione a opção da Q{idx + 1}:", q['opcoes'], index=None, key=f"t_{idx}")
+            if resposta:
+                if resposta == q['correta']:
+                    st.success("🎯 Resposta Correta!")
+                else:
+                    st.error(f"❌ Incorreta. Certo: **{q['correta']}**")
+            st.divider()
+
+# --- MODO 2: TREINO POR TÓPICO ---
+elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
+    st.title("🎯 Treino Direcionado por Tópicos")
+    topicos_disponiveis = sorted(list(set([q['topico'] for q in QUESTOES_POOL])))
+    topico_escolhido = st.selectbox("Escolha o tópico:", topicos_disponiveis)
+    questoes_filtradas = [q for q in QUESTOES_POOL if q['topico'] == topico_escolhido]
+    for idx, q in enumerate(questoes_filtradas):
+        st.markdown(f"### Questão {idx + 1}")
+        st.markdown(f"**{q['pergunta']}**")
+        resposta = st.radio(f"Opções Q{idx + 1}:", q['opcoes'], index=None, key=f"f_{idx}")
+        if resposta:
+            if resposta == q['correta']:
+                st.success("🎯 Correto!")
+            else:
+                st.error(f"❌ Erro! Certo: **{q['correta']}**")
+        st.divider()
+
+# --- MODO 3: SIMULADO LINUX ESSENTIALS ---
+elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
+    st.title("⏱️ Simulado Preparatório - Linux Essentials")
+    if not nome_usuario:
+        st.warning("👤 Por favor, insira seu Nome na barra lateral esquerda.")
+    else:
+        st.write("Estrutura padrão de simulado ativa.")
+        for idx, q in enumerate(st.session_state.questoes_simulado):
+            st.markdown(f"##### {idx + 1}. {q['pergunta']}")
+            st.radio(f"Escolha para a Q{idx + 1}:", q['opcoes'], index=None, key=f"s_{idx}", label_visibility="collapsed")
+            st.divider()
