@@ -4,6 +4,79 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
 import time
+import os
+import glob
+
+# ==========================================
+# -1. SISTEMA DE MONITORAMENTO EM TEMPO REAL
+# ==========================================
+# Diretório para registrar as sessões ativas
+PASTA_SESSIONS = ".active_sessions"
+if not os.path.exists(PASTA_SESSIONS):
+    try:
+        os.makedirs(PASTA_SESSIONS)
+    except Exception:
+        pass
+
+# Registra/atualiza a sessão atual do usuário
+if "session_token" not in st.session_state:
+    st.session_state.session_token = f"sess_{int(time.time())}_{random.randint(1000, 9999)}"
+
+token_atual = st.session_state.session_token
+caminho_sessao = os.path.join(PASTA_SESSIONS, token_atual)
+try:
+    # Cria ou atualiza o arquivo com o timestamp atual
+    with open(caminho_sessao, "w") as f:
+        f.write(str(time.time()))
+except Exception:
+    pass
+
+def obter_metricas_acesso():
+    """Calcula visitantes totais e usuários ativos nos últimos 2 minutos."""
+    # 1. Visitantes Totais (Persistente)
+    arquivo_visitas = ".visitas_totais"
+    visitas = 1
+    if os.path.exists(arquivo_visitas):
+        try:
+            with open(arquivo_visitas, "r") as f:
+                conteudo = f.read().strip()
+                visitas = int(conteudo) if conteudo.isdigit() else 0
+        except Exception:
+            pass
+    
+    # Incrementa apenas uma vez por sessão de usuário no Streamlit
+    if "visitado_computado" not in st.session_state:
+        st.session_state.visitado_computado = True
+        visitas += 1
+        try:
+            with open(arquivo_visitas, "w") as f:
+                f.write(str(visitas))
+        except Exception:
+            pass
+
+    # 2. Usuários Online Agora
+    agora = time.time()
+    limite_inatividade = 120  # 2 minutos (120 segundos)
+    online = 0
+    
+    if os.path.exists(PASTA_SESSIONS):
+        arquivos = glob.glob(os.path.join(PASTA_SESSIONS, "sess_*"))
+        for arq in arquivos:
+            try:
+                mtime = os.path.getmtime(arq)
+                # Se o arquivo foi modificado há menos de 2 minutos, está online
+                if agora - mtime < limite_inatividade:
+                    online += 1
+                else:
+                    # Remove arquivos de sessões expiradas/antigas
+                    os.remove(arq)
+            except Exception:
+                pass
+    
+    # Garante pelo menos 1 online (o próprio usuário atual)
+    online = max(1, online)
+    return online, visitas
+
 
 # ==========================================
 # 0. FUNÇÃO AUXILIAR DE DESDUPLICAÇÃO
@@ -45,7 +118,6 @@ QUESTOES_POOL = desduplicar_questoes(QUESTOES_POOL_RAW)
 # ==========================================
 # 2. CARREGAMENTO DOS ARQUIVOS EXTERNOS (COM FILTRO DE CONTEÚDO)
 # ==========================================
-# Criamos um conjunto de perguntas que já estão no pool para comparação rápida
 perguntas_existentes = {normalizar_texto(q["pergunta"]) for q in QUESTOES_POOL}
 
 for i in range(101, 111):
@@ -55,7 +127,6 @@ for i in range(101, 111):
         for q in pool:
             if isinstance(q, dict) and "pergunta" in q:
                 pergunta_norm = normalizar_texto(q["pergunta"])
-                # Só adiciona se a pergunta textual for inédita
                 if pergunta_norm not in perguntas_existentes:
                     perguntas_existentes.add(pergunta_norm)
                     QUESTOES_POOL.append(q)
@@ -157,10 +228,23 @@ if 'simulado_entregue' not in st.session_state:
     st.session_state.simulado_entregue = False
 if 'tempo_limite_simulado' not in st.session_state:
     st.session_state.tempo_limite_simulado = None
+if 'inicio_simulado' not in st.session_state:
+    st.session_state.inicio_simulado = None
 
 # ==========================================
 # 5. CONTROLES DA BARRA LATERAL
 # ==========================================
+# --- CONTADOR ONLINE E VISITAS NO TOPO DA SIDEBAR ---
+num_online, num_visitas = obter_metricas_acesso()
+
+col_online, col_visitas = st.sidebar.columns(2)
+with col_online:
+    st.metric(label="🟢 Online Agora", value=num_online)
+with col_visitas:
+    st.metric(label="👥 Visitas Totais", value=num_visitas)
+
+st.sidebar.divider()
+
 st.sidebar.header("👤 Identificação do Aluno")
 nome_usuario = st.sidebar.text_input("Seu Nome para o Placar (Obrigatório):", max_chars=20).strip()
 email_usuario = st.sidebar.text_input("Seu E-mail (Opcional):").strip()
@@ -188,7 +272,9 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
         st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
         st.markdown(f"**{q['pergunta']}**")
         
-        chave_resposta = f"treino_{q['id']}"
+        hash_pergunta = str(hash(q['pergunta']))
+        chave_resposta = f"treino_{hash_pergunta}"
+        
         indice_padrao = None
         if chave_resposta in st.session_state.respostas_treino_salvas:
             if st.session_state.respostas_treino_salvas[chave_resposta] in q['opcoes']:
@@ -198,7 +284,7 @@ if modo_selecionado == "📖 Área de Treino (Geral)":
             f"Selecione a opção da Questão {idx + 1}:",
             q['opcoes'],
             index=indice_padrao,
-            key=f"radio_treino_{idx}_{q['id']}"
+            key=f"radio_treino_{idx}_{hash_pergunta}"
         )
         
         st.session_state.respostas_treino_salvas[chave_resposta] = resposta
@@ -234,11 +320,12 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
         st.markdown(f"### Questão {idx + 1}")
         st.markdown(f"**{q['pergunta']}**")
         
+        hash_pergunta = str(hash(q['pergunta']))
         resposta = st.radio(
             f"Opções para a Questão {idx + 1}:",
             q['opcoes'],
             index=None,
-            key=f"radio_topico_{idx}_{q['id']}"
+            key=f"radio_topico_{idx}_{hash_pergunta}"
         )
         
         if resposta:
@@ -255,23 +342,21 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     if nome_usuario and len(questoes_filtradas) > 0:
         st.session_state.ranking_topico[nome_usuario] = f"{total_acertos_topico}/{len(questoes_filtradas)}"
 
-# --- MODO 3: SIMULADO LPI ---
+# --- MODO 3: SIMULADO LINUX ESSENTIALS ---
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
-    st.title("⏱️ Simulado Preparatório LPI")
+    st.title("⏱️ Simulado Preparatório - Linux Essentials")
     
-    # TRAVA PRINCIPAL: Obriga preenchimento do Nome antes de ver a prova
     if not nome_usuario:
         st.warning("👤 Por favor, insira seu **Nome** na barra lateral esquerda para iniciar o Simulado.")
     else:
-        # Define tempo de prova: 60 minutos (3600 segundos)
         DURACAO_PROVA = 3600 
         
         if not st.session_state.tempo_limite_simulado:
             st.session_state.tempo_limite_simulado = time.time() + DURACAO_PROVA
+            st.session_state.inicio_simulado = time.time()
 
         tempo_restante = int(st.session_state.tempo_limite_simulado - time.time())
 
-        # MONITOR DE TEMPO E AUTO-ENVIO
         if tempo_restante <= 0 and not st.session_state.simulado_entregue:
             st.session_state.simulado_entregue = True
             st.error("⏰ O tempo acabou! Seu simulado foi encerrado e computado automaticamente.")
@@ -280,11 +365,9 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
         questoes_simulado = st.session_state.questoes_simulado
         
         if not st.session_state.simulado_entregue:
-            # Renderização do Relógio do topo
             mins, segs = divmod(tempo_restante, 60)
             st.metric(label="⏳ Tempo Restante de Prova", value=f"{mins:02d}m {segs:02d}s")
             
-            # Alerta de 5 Minutos Restantes
             if tempo_restante <= 300:
                 st.warning("⚠️ **Atenção Aluno!** Faltam menos de 5 minutos para o encerramento automático da sua prova!")
                 
@@ -293,15 +376,16 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
             for idx, q in enumerate(questoes_simulado):
                 st.markdown(f"##### {idx + 1}. {q['pergunta']}")
                 
+                hash_pergunta = str(hash(q['pergunta']))
                 resposta = st.radio(
                     f"Escolha para a Q{idx + 1}:",
                     q['opcoes'],
                     index=None,
-                    key=f"simulado_q_{idx}_{q['id']}",
+                    key=f"simulado_q_{idx}_{hash_pergunta}",
                     label_visibility="collapsed"
                 )
                 if resposta:
-                    st.session_state.respostas_simulado[q['id']] = resposta
+                    st.session_state.respostas_simulado[hash_pergunta] = resposta
                 st.divider()
 
             total_respondidas = len(st.session_state.respostas_simulado)
@@ -317,12 +401,19 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
         else:
             # EXIBIÇÃO DE RESULTADOS PÓS-PROVA
             pontuacao = 0
-            relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\nAluno: {nome_usuario}\n\n"
+            tempo_decorrido_seg = int(time.time() - st.session_state.inicio_simulado) if st.session_state.inicio_simulado else 0
+            t_min, t_seg = divmod(tempo_decorrido_seg, 60)
+            tempo_formatado = f"{t_min}m {t_seg}s"
+
+            relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\n"
+            relatorio_texto += f"Aluno: {nome_usuario}\n"
+            relatorio_texto += f"Tempo de Prova: {tempo_formatado}\n\n"
             
             st.subheader("📊 Resultado Geral da Prova")
             
             for idx, q in enumerate(questoes_simulado):
-                resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
+                hash_pergunta = str(hash(q['pergunta']))
+                resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
                 if resp_aluno == q['correta']:
                     pontuacao += 1
                     status = "CORRETA"
@@ -342,7 +433,8 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
             with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
                 for idx, q in enumerate(questoes_simulado):
-                    resp_aluno = st.session_state.respostas_simulado.get(q['id'], "Não Respondida")
+                    hash_pergunta = str(hash(q['pergunta']))
+                    resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
                     if resp_aluno == q['correta']:
                         st.write(f"✅ **{idx+1}. {q['pergunta']}**")
                     else:
@@ -353,13 +445,18 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
             if email_usuario:
                 relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
-                enviar_email_seguro(email_usuario, f"Resultado Simulado Linux LPI - {nome_usuario}", relatorio_texto)
+                enviar_email_seguro(
+                    email_usuario, 
+                    f"Resultado Simulado Linux Essentials - {nome_usuario}", 
+                    relatorio_texto
+                )
 
             if st.button("🔄 Refazer Novo Simulado"):
                 st.session_state.questoes_simulado = gerar_40_questoes()
                 st.session_state.respostas_simulado = {}
                 st.session_state.simulado_entregue = False
                 st.session_state.tempo_limite_simulado = None
+                st.session_state.inicio_simulado = None
                 st.rerun()
 
 # --- RANKING E PLACAR LIDERES NA BARRA LATERAL ---
@@ -368,5 +465,5 @@ st.sidebar.subheader("🏆 Placar de Líderes")
 if st.sidebar.checkbox("Exibir Rankings Ativos"):
     st.sidebar.markdown("**Área de Treino:**")
     st.sidebar.json(st.session_state.ranking_treino)
-    st.sidebar.markdown("**Simulados LPI:**")
+    st.sidebar.markdown("**Simulados Linux Essentials:**")
     st.sidebar.json(st.session_state.ranking_simulado)
