@@ -8,7 +8,7 @@ if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
     <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; padding: 30px; border-radius: 12px; margin-top: 20px;">
         <h2 style="color: #1E3A8A; margin-top: 0px;">Edielson Samico</h2>
         <p style="font-size: 16px; color: #475569;">
-            Desenvolvedor e entusiasta de Tecnologias, criação de sistemas Web interativos e Poesias.
+            Desenvolvedor e entusiasta de tecnologia Linux, infraestrutura e criação de sistemas web interativos.
         </p>
         <hr style="border: 0; border-top: 1px dashed #CBD5E1; margin: 20px 0;">
         <h4 style="color: #0F172A; margin-bottom: 15px;">Entre em contacto:</h4>
