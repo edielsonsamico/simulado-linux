@@ -318,5 +318,162 @@ elif modo_selecionado == "📖 Área de Treino (Geral)":
 elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     st.title("🎯 Treino Direcionado por Tópicos")
     
-    topicos_disponiveis = sorted(list(set(
+    topicos_disponiveis = sorted(list(set([q['topico'] for q in QUESTOES_POOL])))
+    topico_escolhido = st.selectbox("Escolha o tópico que deseja dominar:", topicos_disponiveis)
+    
+    questoes_filtradas = [q for q in QUESTOES_POOL if q['topico'] == topico_escolhido]
+    st.write(f"Encontradas **{len(questoes_filtradas)}** questões para este tópico.")
+    
+    total_acertos_topico = 0
+    
+    for idx, q in enumerate(questoes_filtradas):
+        st.markdown(f"### Questão {idx + 1}")
+        st.markdown(f"**{q['pergunta']}**")
         
+        hash_pergunta = str(hash(q['pergunta']))
+        resposta = st.radio(
+            f"Opções para a Questão {idx + 1}:",
+            q['opcoes'],
+            index=None,
+            key=f"radio_topico_{idx}_{hash_pergunta}"
+        )
+        
+        if resposta:
+            if resposta == q['correta']:
+                st.success("🎯 Correto!")
+                total_acertos_topico += 1
+            else:
+                st.error(f"❌ Erro! Alternativa correta: **{q['correta']}**")
+            
+            with st.expander("📚 Detalhes do Conceito"):
+                st.info(q['explicacao'])
+        st.divider()
+
+    if nome_usuario and len(questoes_filtradas) > 0:
+        st.session_state.ranking_topico[nome_usuario] = f"{total_acertos_topico}/{len(questoes_filtradas)}"
+
+# --- MODO 3: SIMULADO LINUX ESSENTIALS ---
+elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
+    st.title("⏱️ Simulado Preparatório - Linux Essentials")
+    
+    if not nome_usuario:
+        st.warning("👤 Por favor, insira seu **Nome** na barra lateral esquerda para iniciar o Simulado.")
+    else:
+        DURACAO_PROVA = 3600 
+        
+        if not st.session_state.tempo_limite_simulado:
+            st.session_state.tempo_limite_simulado = time.time() + DURACAO_PROVA
+            st.session_state.inicio_simulado = time.time()
+
+        tempo_restante = int(st.session_state.tempo_limite_simulado - time.time())
+
+        if tempo_restante <= 0 and not st.session_state.simulado_entregue:
+            st.session_state.simulado_entregue = True
+            st.error("⏰ O tempo acabou! Seu simulado foi encerrado e computado automaticamente.")
+            st.rerun()
+
+        questoes_simulado = st.session_state.questoes_simulado
+        
+        if not st.session_state.simulado_entregue:
+            mins, segs = divmod(tempo_restante, 60)
+            st.metric(label="⏳ Tempo Restante de Prova", value=f"{mins:02d}m {segs:02d}s")
+            
+            if tempo_restante <= 300:
+                st.warning("⚠️ **Atenção Aluno!** Faltam menos de 5 minutos para o encerramento automático da sua prova!")
+                
+            st.write("---")
+
+            for idx, q in enumerate(questoes_simulado):
+                st.markdown(f"##### {idx + 1}. {q['pergunta']}")
+                
+                hash_pergunta = str(hash(q['pergunta']))
+                resposta = st.radio(
+                    f"Escolha para a Q{idx + 1}:",
+                    q['opcoes'],
+                    index=None,
+                    key=f"simulado_q_{idx}_{hash_pergunta}",
+                    label_visibility="collapsed"
+                )
+                if resposta:
+                    st.session_state.respostas_simulado[hash_pergunta] = resposta
+                st.divider()
+
+            total_respondidas = len(st.session_state.respostas_simulado)
+            total_necessarias = len(questoes_simulado)
+            
+            if st.button("📥 Entregar Simulado e Gerar Nota", type="primary"):
+                if total_respondidas < total_necessarias:
+                    st.error(f"⚠️ Incompleto: Você precisa responder todas as questões! Preencheu **{total_respondidas} de {total_necessarias}**.")
+                else:
+                    st.session_state.simulado_entregue = True
+                    st.rerun()
+
+        else:
+            # EXIBIÇÃO DE RESULTADOS PÓS-PROVA
+            pontuacao = 0
+            tempo_decorrido_seg = int(time.time() - st.session_state.inicio_simulado) if st.session_state.inicio_simulado else 0
+            t_min, t_seg = divmod(tempo_decorrido_seg, 60)
+            tempo_formatado = f"{t_min}m {t_seg}s"
+
+            relatorio_texto = f"--- BOLETIM DE DESEMPENHO LINUX ESSENTIALS ---\n"
+            relatorio_texto += f"Aluno: {nome_usuario}\n"
+            relatorio_texto += f"Tempo de Prova: {tempo_formatado}\n\n"
+            
+            st.subheader("📊 Resultado Geral da Prova")
+            
+            for idx, q in enumerate(questoes_simulado):
+                hash_pergunta = str(hash(q['pergunta']))
+                resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
+                if resp_aluno == q['correta']:
+                    pontuacao += 1
+                    status = "CORRETA"
+                else:
+                    status = "INCORRETA"
+                relatorio_texto += f"Q{idx+1}: {status} (Escolheu: {resp_aluno} | Correta: {q['correta']})\n"
+
+            percentual = (pontuacao / len(questoes_simulado)) * 100
+            
+            if percentual >= 70:
+                st.balloons()
+                st.success(f"🎉 **Aprovado!** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Aprovado)"
+            else:
+                st.error(f"📉 **Abaixo da meta de 70%.** Você acertou {pontuacao} de {len(questoes_simulado)} ({percentual:.1f}%)")
+                st.session_state.ranking_simulado[nome_usuario] = f"{pontuacao}/{len(questoes_simulado)} (Recuperação)"
+
+            with st.expander("🔍 Ver Gabarito Técnico Detalhado", expanded=True):
+                for idx, q in enumerate(questoes_simulado):
+                    hash_pergunta = str(hash(q['pergunta']))
+                    resp_aluno = st.session_state.respostas_simulado.get(hash_pergunta, "Não Respondida")
+                    if resp_aluno == q['correta']:
+                        st.write(f"✅ **{idx+1}. {q['pergunta']}**")
+                    else:
+                        st.write(f"❌ **{idx+1}. {q['pergunta']}**")
+                    st.write(f"Sua resposta: *{resp_aluno}* | Resposta certa: **{q['correta']}**")
+                    st.info(f"Explicação: {q['explicacao']}")
+                    st.divider()
+
+            if email_usuario:
+                relatorio_texto += f"\nNota Final: {percentual:.1f}% - Aproveitamento: {pontuacao}/{len(questoes_simulado)}"
+                enviar_email_seguro(
+                    email_usuario, 
+                    f"Resultado Simulado Linux Essentials - {nome_usuario}", 
+                    relatorio_texto
+                )
+
+            if st.button("🔄 Refazer Novo Simulado"):
+                st.session_state.questoes_simulado = gerar_40_questoes()
+                st.session_state.respostas_simulado = {}
+                st.session_state.simulado_entregue = False
+                st.session_state.tempo_limite_simulado = None
+                st.session_state.inicio_simulado = None
+                st.rerun()
+
+# --- RANKING E PLACAR LIDERES NA BARRA LATERAL ---
+st.sidebar.divider()
+st.sidebar.subheader("🏆 Placar de Líderes")
+if st.sidebar.checkbox("Exibir Rankings Ativos"):
+    st.sidebar.markdown("**Área de Treino:**")
+    st.sidebar.json(st.session_state.ranking_treino)
+    st.sidebar.markdown("**Simulados Linux Essentials:**")
+    st.sidebar.json(st.session_state.ranking_simulado)
