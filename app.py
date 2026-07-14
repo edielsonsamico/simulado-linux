@@ -77,7 +77,7 @@ QUESTOES_POOL_RAW = [
     {"id": 4, "topico": "Tópico 104: Dispositivos", "pergunta": "Qual comando relata em tempo real o espaço livre/disponível e o uso em blocos para todos os sistemas de arquivos atualmente montados?", "opcoes": ["df", "du", "fdisk", "free"], "correta": "df", "explicacao": "O comando df (disk free) lê a tabela de montagens do sistema exibindo capacidades, space ocupado e pontos de montagem activos."},
     {"id": 5, "topico": "Tópico 105: Scripts e SQL", "pergunta": "Em um script executável em shell Bash, qual comando pausa a execução contínua para ler informações digitadas pelo usuário no teclado?", "opcoes": ["read", "input", "get", "scan"], "correta": "read", "explicacao": "O comando embutido 'read' interrompe o script colhendo os caracteres do fluxo de entrada padrão (stdin) e salvando-os em uma variável."},
     {"id": 6, "topico": "Tópico 106: Desktops", "pergunta": "Qual é o caminho completo e o nome do arquivo de configuração central responsável por gerenciar os parâmetros de vídeo e entradas do servidor de janelas X11?", "opcoes": ["/etc/X11/xorg.conf", "/etc/X11/x11.conf", "/etc/xorg.conf", "/var/X11/xorg.conf"], "correta": "/etc/X11/xorg.conf", "explicacao": "O arquivo estático /etc/X11/xorg.conf centraliza os módulos de layout, mouses, teclados, placas de vídeo e monitores na arquitetura XOrg clássica."},
-    {"id": 7, "topico": "Tópico 107: Administração", "pergunta": "Qual arquivo confinado abriga de forma criptografada as senhas dos usuários e as regras específicas de expiração de validade da conta?", "opcoes": ["/etc/shadow", "/etc/passwd", "/etc/secure", "/var/shadow"], "correta": "/etc/shadow", "explicacao": "Por motivos de segurança, as hashes de senhas e políticas de obsolescência ficam trancadas no arquivo /etc/shadow com permissões restritas a root."},
+    {"id": 7, "topico": "Tópico 107: Administration", "pergunta": "Qual arquivo confinado abriga de forma criptografada as senhas dos usuários e as regras específicas de expiração de validade da conta?", "opcoes": ["/etc/shadow", "/etc/passwd", "/etc/secure", "/var/shadow"], "correta": "/etc/shadow", "explicacao": "Por motivos de segurança, as hashes de senhas e políticas de obsolescência ficam trancadas no arquivo /etc/shadow com permissões restritas a root."},
     {"id": 8, "topico": "Tópico 108: Serviços", "pergunta": "O protocolo de sincronização temporal NTP executa o seu tráfego vital por meio de qual porta de rede e protocolo de transporte, respectively?", "opcoes": ["Porta UDP 123", "Porta TCP 123", "Porta UDP 53", "Porta TCP 80"], "correta": "Porta UDP 123", "explicacao": "O Network Time Protocol (NTP) dita a troca estruturada de pacotes de timestamp de tempo sobre datagramas na porta UDP 123."},
     {"id": 9, "topico": "Tópico 110: Redes", "pergunta": "Na configuração básica e resolução estática sem domínio real de rede externa, qual arquivo mapeia pares de IP e Nome Local no Linux?", "opcoes": ["/etc/hosts", "/etc/resolv.conf", "/etc/networks", "/etc/hostname"], "correta": "/etc/hosts", "explicacao": "O arquivo /etc/hosts associa IPs a nomes locais manualmente, sem depender de servidores DNS."},
     {"id": 10, "topico": "Tópico 110: Segurança", "pergunta": "Qual a sintaxe restrita aplicada no utilitário de busca find para garimpar especificamente todos e quaisquer arquivos baseados no gatilho do modo especial SUID nos binários ativos da raiz (/)?", "opcoes": ["find / -perm -4000", "find / -perm 777", "find / -type f -suid", "find / -user root"], "correta": "find / -perm -4000", "explicacao": "O bit 4000 identifica de forma octal o SUID, rodando arquivos com privilégios do dono do binário."}
@@ -266,7 +266,7 @@ if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
     
     with st.container(border=True):
         st.subheader("Edielson Samico")
-        st.write("Desenvolvedor de sistemas e aplicativos, especialista em criação de soluções web interativas, logos, identidades visuais corporativas, análise de tráfego web e suporte tecnológico completo para empresas e clientes finais.")
+        st.write("Desenvolvedor de sistemas e aplicativos, especialista em criação de soluções web interativas, logos, identidades visuais corporativas, analysis de tráfego web e suporte tecnológico completo para empresas e clientes finais.")
         
         st.divider()
         st.markdown("### 📞 Entre em contato:")
@@ -285,7 +285,7 @@ if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
             st.link_button("🎥 YouTube", "https://youtube.com/@EdielsonSamico", use_container_width=True)
             st.caption("@EdielsonSamico")
 
-# --- MODO: MATERIAIS VIP & SIMULADOS (SOCIAL LOCKER CORRIGIDO) ---
+# --- MODO: MATERIAIS VIP & SIMULADOS (SOCIAL LOCKER ATUALIZADO COM O NOVO LINK) ---
 elif modo_selecionado == "🎁 Materiais VIP & Simulados":
     st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
     st.write("Acelere sua aprovação nas certificações resgatando materiais avançados de estudo.")
@@ -310,7 +310,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                 if st.button("🔓 2º Passo: Liberar Acesso", use_container_width=True):
                     st.session_state.vip_liberado = True
                     st.balloons()
-                    st.rerun() # Linha corrigida de forma segura!
+                    st.rerun()
     else:
         st.success("🎉 Parabéns! Seus conteúdos e recursos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns(2)
@@ -326,13 +326,14 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
             with st.container(border=True):
                 st.subheader("🏆 Simulado VIP Avançado")
                 st.write("Questões de nível de dificuldade elevado selecionadas e comentadas para testar seus limites reais antes da prova.")
+                # NOVO LINK DO CADERNO ATUALIZADO COM SUCESSO
                 st.link_button(
                     "🚀 Abrir Simulado VIP", 
-                    "https://notebooklm.google.com/notebook/5c438fb6-d069-4b7f-b64c-542d53add525/artifact/f5d7b6b8-9e48-4582-bbe8-e491bb4171c9?utm_source=nlm_web_share&utm_medium=google_oo&utm_campaign=art_share_1&utm_content=&utm_smc=nlm_web_share_google_oo_art_share_1_", 
+                    "https://notebooklm.google.com/notebook/5c438fb6-d069-4b7f-b64c-542d53add525", 
                     use_container_width=True,
                     type="primary"
                 )
-                st.caption("Link externo integrado com sucesso na plataforma SAMICOIOT.")
+                st.caption("Link do Caderno principal integrado com sucesso na SAMICOIOT.")
 
 # --- MODO 1: ÁREA DE TREINAMENTO GERAL ---
 elif modo_selecionado == "📖 Área de Treino (Geral)":
