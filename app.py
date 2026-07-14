@@ -10,7 +10,6 @@ import glob
 # ==========================================
 # -1. SISTEMA DE MONITORAMENTO EM TEMPO REAL
 # ==========================================
-# Diretório para registrar as sessões ativas
 PASTA_SESSIONS = ".active_sessions"
 if not os.path.exists(PASTA_SESSIONS):
     try:
@@ -18,24 +17,26 @@ if not os.path.exists(PASTA_SESSIONS):
     except Exception:
         pass
 
-# Registra/atualiza a sessão atual do usuário
+# Gera um token único para a sessão atual
 if "session_token" not in st.session_state:
     st.session_state.session_token = f"sess_{int(time.time())}_{random.randint(1000, 9999)}"
 
 token_atual = st.session_state.session_token
 caminho_sessao = os.path.join(PASTA_SESSIONS, token_atual)
+
 try:
-    # Cria ou atualiza o arquivo com o timestamp atual
     with open(caminho_sessao, "w") as f:
         f.write(str(time.time()))
 except Exception:
     pass
 
 def obter_metricas_acesso():
-    """Calcula visitantes totais e usuários ativos nos últimos 2 minutos."""
-    # 1. Visitantes Totais (Persistente)
+    """Calcula visitantes únicos de forma persistente e usuários online sem duplicar por F5."""
     arquivo_visitas = ".visitas_totais"
-    visitas = 1
+    arquivo_log_tokens = ".registro_sessoes" # Guarda os tokens que já visitaram
+    
+    # 1. Recupera as visitas salvas
+    visitas = 0
     if os.path.exists(arquivo_visitas):
         try:
             with open(arquivo_visitas, "r") as f:
@@ -43,20 +44,33 @@ def obter_metricas_acesso():
                 visitas = int(conteudo) if conteudo.isdigit() else 0
         except Exception:
             pass
-    
-    # Incrementa apenas uma vez por sessão de usuário no Streamlit
-    if "visitado_computado" not in st.session_state:
-        st.session_state.visitado_computado = True
-        visitas += 1
+            
+    # Recupera a lista de tokens que já foram computados como visitas reais
+    tokens_registrados = set()
+    if os.path.exists(arquivo_log_tokens):
         try:
-            with open(arquivo_visitas, "w") as f:
-                f.write(str(visitas))
+            with open(arquivo_log_tokens, "r") as f:
+                tokens_registrados = set(f.read().splitlines())
         except Exception:
             pass
 
-    # 2. Usuários Online Agora
+    # Se este token de sessão ainda não foi registrado no arquivo de visitas do servidor, conta +1
+    if token_atual not in tokens_registrados:
+        tokens_registrados.add(token_atual)
+        visitas += 1
+        try:
+            # Atualiza o arquivo de visitas totais
+            with open(arquivo_visitas, "w") as f:
+                f.write(str(visitas))
+            # Registra o token para que ele nunca mais some visitas, mesmo com F5
+            with open(arquivo_log_tokens, "a") as f:
+                f.write(token_atual + "\n")
+        except Exception:
+            pass
+
+    # 2. Usuários Online Agora (Baseado em atividade nos últimos 2 minutos)
     agora = time.time()
-    limite_inatividade = 120  # 2 minutos (120 segundos)
+    limite_inatividade = 120  # 2 minutos
     online = 0
     
     if os.path.exists(PASTA_SESSIONS):
@@ -64,16 +78,15 @@ def obter_metricas_acesso():
         for arq in arquivos:
             try:
                 mtime = os.path.getmtime(arq)
-                # Se o arquivo foi modificado há menos de 2 minutos, está online
                 if agora - mtime < limite_inatividade:
                     online += 1
                 else:
-                    # Remove arquivos de sessões expiradas/antigas
+                    # Limpa sessões antigas que fecharam a aba ou abandonaram o site
                     os.remove(arq)
             except Exception:
                 pass
     
-    # Garante pelo menos 1 online (o próprio usuário atual)
+    # Garante coerência mínima
     online = max(1, online)
     return online, visitas
 
@@ -234,7 +247,7 @@ if 'inicio_simulado' not in st.session_state:
 # ==========================================
 # 5. CONTROLES DA BARRA LATERAL
 # ==========================================
-# --- CONTADOR ONLINE E VISITAS NO TOPO DA SIDEBAR ---
+# Executa a função robusta de contagem antes de renderizar a barra lateral
 num_online, num_visitas = obter_metricas_acesso()
 
 col_online, col_visitas = st.sidebar.columns(2)
