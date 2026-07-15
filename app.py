@@ -14,7 +14,8 @@ def obter_armazenamento_global():
     return {
         "usuarios_online": {},     
         "registro_visitas": set(), 
-        "visitas_totais": 0
+        "visitas_totais": 0,
+        "placar_lideres": {} # Chave: Nome -> Valor: Maior Pontuação VIP Acumulada
     }
 
 memoria_global = obter_armazenamento_global()
@@ -95,7 +96,7 @@ for i in range(101, 111):
         for q in pool:
             if isinstance(q, dict) and "pergunta" in q:
                 pergunta_norm = normalizar_texto(q["pergunta"])
-                if pergunta_norm not in perguntas_existentes:
+                if pergunta_norm not in preguntas_existentes:
                     preguntas_existentes.add(pergunta_norm)
                     q_copia = q.copy()
                     if "id" not in q_copia:
@@ -109,23 +110,30 @@ for i in range(101, 111):
 
 
 # ==========================================
-# 5. POOL COMPLETO DO QUIZ VIP - 40 QUESTÕES EXCLUSIVAS PARA OS 4 BLOCOS
+# 5. POOL COMPLETO DO QUIZ VIP - COM PESO/DIFICULDADE CONFIGURADOS
 # ==========================================
-# (Adicione ou importe aqui as 40 perguntas do seu Quiz do NotebookLM)
 QUESTOES_VIP_REPOSITORIO_COMPLETO = [
     # Bloco 1
-    {"id": 901, "pergunta": "Qual é a principal diferença entre os dispositivos do tipo 'Coldplug' e 'Hotplug'?", "opcoes": ["A. Dispositivos hotplug são identificados apenas no momento do POST da BIOS.", "B. Dispositivos hotplug só podem ser conectados via porta USB 3.0.", "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "D. Coldplug é um termo usado exclusivamente para processadores em servidores."], "correta": "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "dica": "Cold = Frio (Desligado) | Hot = Quente (Ligado).", "explicacao": "Sistemas Coldplug necessitam da máquina desligada para alteração física de hardware.", "bloco": 1},
-    {"id": 902, "pergunta": "De acordo com a hierarquia do sistema de arquivos (FHS), qual é a finalidade principal do diretório /var?", "opcoes": ["A. Servir como ponto de montagem padrão para mídias removíveis.", "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "C. Armazenar arquivos estáticos do gerenciador de boot.", "D. Abrigar comandos binários essenciais para todos os usuários."], "correta": "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "dica": "O nome vem de 'variable'.", "explicacao": "O /var é designado para conter logs, caches e spools.", "bloco": 1},
-    # (Inserir mais questões aqui com a chave "bloco": 1, 2, 3 ou 4 para completar as 10 por bloco)
+    {"id": 901, "pergunta": "Qual é a principal diferença entre os dispositivos do tipo 'Coldplug' e 'Hotplug'?", "opcoes": ["A. Dispositivos hotplug são identificados apenas no momento do POST da BIOS.", "B. Dispositivos hotplug só podem ser conectados via porta USB 3.0.", "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "D. Coldplug é um termo usado exclusivamente para processadores em servidores."], "correta": "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "dica": "Cold = Frio (Desligado) | Hot = Quente (Ligado).", "explicacao": "Sistemas Coldplug necessitam da máquina desligada para alteração física de hardware.", "bloco": 1, "dificuldade": "Fácil", "pontos": 10},
+    {"id": 902, "pergunta": "De acordo com a hierarquia do sistema de arquivos (FHS), qual é a finalidade principal do diretório /var?", "opcoes": ["A. Servir como ponto de montagem padrão para mídias removíveis.", "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "C. Armazenar arquivos estáticos do gerenciador de boot.", "D. Abrigar comandos binários essenciais para todos os usuários."], "correta": "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "dica": "O nome vem de 'variable'.", "explicacao": "O /var é designado para conter logs, caches e spools.", "bloco": 1, "dificuldade": "Média", "pontos": 20},
 ]
 
-# Garantir fallback dinâmico caso falte alguma questão VIP
+# Fallback robusto para garantir 40 questões balanceadas com dificuldades aleatórias
+dificuldades_peso = [
+    {"dificuldade": "Fácil", "pontos": 10},
+    {"dificuldade": "Média", "pontos": 20},
+    {"dificuldade": "Difícil", "pontos": 30}
+]
+
 while len(QUESTOES_VIP_REPOSITORIO_COMPLETO) < 40:
     nova_q = random.choice(QUESTOES_POOL).copy()
+    peso_sorteado = random.choice(dificuldades_peso)
     nova_q["id"] = 1000 + len(QUESTOES_VIP_REPOSITORIO_COMPLETO)
     nova_q["bloco"] = (len(QUESTOES_VIP_REPOSITORIO_COMPLETO) // 10) + 1
     nova_q["dica"] = "Consulte o resumo do seu Guia de Estudos."
     nova_q["explicacao"] = "Reveja a documentação oficial LPI."
+    nova_q["dificuldade"] = peso_sorteado["dificuldade"]
+    nova_q["pontos"] = peso_sorteado["pontos"]
     QUESTOES_VIP_REPOSITORIO_COMPLETO.append(nova_q)
 
 
@@ -139,7 +147,7 @@ def gerar_40_questoes_aleatorias():
 
 
 # ==========================================
-# 7. CONFIGURAÇÃO DA INTERFACE & ESTILO CSS
+# 7. CONFIGURAÇÃO DA INTERFACE & ESTILIZAÇÃO
 # ==========================================
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
@@ -181,7 +189,7 @@ if 'inicio_simulado' not in st.session_state:
 if 'simulado_id' not in st.session_state:
     st.session_state.simulado_id = random.randint(10000, 99999)
 
-# Estados da Área VIP com Gamificação por Blocos
+# Estados da Área VIP Gamificada com Pontuação
 if "vip_liberado" not in st.session_state:
     st.session_state.vip_liberado = False
 if "bloco_vip_atual" not in st.session_state:
@@ -190,11 +198,12 @@ if "indice_pergunta_bloco" not in st.session_state:
     st.session_state.indice_pergunta_bloco = 0
 if "acertos_bloco_atual" not in st.session_state:
     st.session_state.acertos_bloco_atual = 0
+if "pontos_acumulados" not in st.session_state:
+    st.session_state.pontos_acumulados = 0
 if "questoes_sorteadas_blocos" not in st.session_state:
     st.session_state.questoes_sorteadas_blocos = {}
 
-
-# Inicialização segura dos cadernos exclusivos de cada bloco (10 por bloco, sem repetição)
+# Sorteia os cadernos inéditos iniciais
 if not st.session_state.questoes_sorteadas_blocos:
     for b in range(1, 5):
         pool_b = [q for q in QUESTOES_VIP_REPOSITORIO_COMPLETO if q["bloco"] == b]
@@ -212,7 +221,7 @@ col_visitas.metric(label="👥 Visitas Totais", value=num_visitas)
 
 st.sidebar.divider()
 st.sidebar.header("👤 Identificação")
-nome_usuario = st.sidebar.text_input("Seu Nome para o Placar:", max_chars=20).strip()
+nome_usuario = st.sidebar.text_input("Seu Nome para o Placar (Obrigatório para Rank):", max_chars=20).strip()
 
 st.sidebar.divider()
 modo_selecionado = st.sidebar.radio(
@@ -362,7 +371,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 st.balloons()
                 st.rerun()
 
-# --- ABA VIP: MATERIAIS VIP & SISTEMA DE BLOCOS GAMIFICADOS ---
+# --- ABA VIP: MATERIAIS VIP & SISTEMA DE BLOCOS GAMIFICADOS POR PESO ---
 elif modo_selecionado == "🎁 Materiais VIP & Simulados":
     st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
     st.write("Materiais avançados mantidos pela SAMICOIOT.")
@@ -382,7 +391,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
         st.success("🎉 Parabéns! Seus conteúdos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns([1, 2])
         
-        # CARD 1: DOWNLOAD DOS PDFs
+        # CARD 1: DOWNLOAD DOS PDFs & PLACAR DE LÍDERES
         with col_apostila:
             with st.container(border=True):
                 st.subheader("📚 Seus Livros & Materiais")
@@ -417,26 +426,45 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                 else:
                     st.warning("⚠️ O arquivo '" + caminho_terminal + "' não foi localizado.")
                 
-                st.caption("Arquivos servidos diretamente pela SAMICOIOT.")
-                
-        # CARD 2: SIMULADO VIP GAMIFICADO (4 BLOCOS DE 10 QUESTÕES)
+                st.divider()
+                # --- EXIBIÇÃO DO RANKING DOS ALUNOS ---
+                st.subheader("🥇 Placar Geral VIP")
+                if not memoria_global["placar_lideres"]:
+                    st.caption("Ainda sem registros. Seja o primeiro a pontuar!")
+                else:
+                    ordem_lideres = sorted(memoria_global["placar_lideres"].items(), key=lambda x: x[1], reverse=True)
+                    for pos, (nome, pts) in enumerate(ordem_lideres[:5]):
+                        medalha = "🥇" if pos == 0 else "🥈" if pos == 1 else "🥉" if pos == 2 else "👤"
+                        st.write(f"{medalha} **{nome}**: `{pts} pts`")
+
+        # CARD 2: SIMULADO VIP GAMIFICADO (4 BLOCOS DE 10 QUESTÕES POR PESO)
         with col_simulado_vip:
             with st.container(border=True):
                 bloco_atual = st.session_state.bloco_vip_atual
                 
                 st.subheader(f"🏆 Linux Quiz VIP — Bloco {bloco_atual} de 4 (Nativo)")
-                st.write("Acerte no mínimo 7 questões para desbloquear a próxima fase.")
+                st.write(f"Sua Pontuação VIP Acumulada: **{st.session_state.pontos_acumulados} pts**")
                 st.divider()
                 
-                # Resgata o caderno do bloco atual
-                caderno_atual = st.session_state.questoes_sorteadas_blocos[bloco_atual]
+                caderno_atual = st.session_state.questoes_sorteas_blocos = st.session_state.questoes_sorteadas_blocos[bloco_atual]
                 idx_q = st.session_state.indice_pergunta_bloco
                 total_q_bloco = len(caderno_atual)
                 
                 if idx_q < total_q_bloco:
                     q_atual = caderno_atual[idx_q]
                     
-                    st.markdown(f"<p style='color: #64748B; font-weight: bold;'>{idx_q + 1} / {total_q_bloco}</p>", unsafe_allow_html=True)
+                    # Identificadores de peso e dificuldade na tela
+                    cor_tag = "#10B981" if q_atual["dificuldade"] == "Fácil" else "#F59E0B" if q_atual["dificuldade"] == "Média" else "#EF4444"
+                    st.markdown(
+                        f"""
+                        <div style='display: flex; gap: 10px; align-items: center; margin-bottom: 10px;'>
+                            <span style='color: #64748B; font-weight: bold;'>{idx_q + 1} / {total_q_bloco}</span>
+                            <span style='background-color: {cor_tag}; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold;'>{q_atual['dificuldade']} (+{q_atual['pontos']} pts)</span>
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                    
                     st.markdown(f"#### **{q_atual['pergunta']}**")
                     
                     escolha = st.radio(
@@ -454,12 +482,12 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             st.info(q_atual["dica"])
                             
                     with col_prox:
-                        # Botão de Avançar
                         if st.button("Próxima Questão ➡️", use_container_width=True, type="primary"):
                             if escolha:
                                 if escolha == q_atual['correta']:
                                     st.session_state.acertos_bloco_atual += 1
-                                    st.toast("🎯 Resposta Correta!", icon="✅")
+                                    st.session_state.pontos_acumulados += q_atual["pontos"]
+                                    st.toast("🎯 Resposta Correta! (+" + str(q_atual['pontos']) + " pontos adicionados)", icon="✅")
                                 else:
                                     st.toast("❌ Incorreto!", icon="🚨")
                                 st.session_state.indice_pergunta_bloco += 1
@@ -467,10 +495,16 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             else:
                                 st.warning("Por favor, selecione uma alternativa antes de avançar.")
                 else:
-                    # Fim do Bloco: Avaliação de desempenho
                     acertos = st.session_state.acertos_bloco_atual
                     st.markdown(f"### Fim do Bloco {bloco_atual}!")
                     st.markdown(f"Você acertou: **{acertos} / 10**")
+                    
+                    # Salva ou atualiza a maior pontuação do usuário de forma automática no placar
+                    if nome_usuario:
+                        nome_key = nome_usuario.strip()
+                        recorde_antigo = memoria_global["placar_lideres"].get(nome_key, 0)
+                        if st.session_state.pontos_acumulados > recorde_antigo:
+                            memoria_global["placar_lideres"][nome_key] = st.session_state.pontos_acumulados
                     
                     if acertos >= 7:
                         if bloco_atual < 4:
@@ -487,7 +521,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                                 st.session_state.bloco_vip_atual = 1
                                 st.session_state.indice_pergunta_bloco = 0
                                 st.session_state.acertos_bloco_atual = 0
-                                # Força novos sorteios aleatórios e inéditos
+                                st.session_state.pontos_acumulados = 0
                                 st.session_state.questoes_sorteadas_blocos = {}
                                 st.rerun()
                     else:
@@ -495,7 +529,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                         if st.button("🔄 Tentar Novamente este Bloco", use_container_width=True, type="primary"):
                             st.session_state.indice_pergunta_bloco = 0
                             st.session_state.acertos_bloco_atual = 0
-                            # Re-embaralha o bloco para a tentativa não ser igual
+                            # Remove os pontos apenas do bloco que falhou para manter o Rank limpo
                             pool_b = [q for q in QUESTOES_VIP_REPOSITORIO_COMPLETO if q["bloco"] == bloco_atual]
                             st.session_state.questoes_sorteadas_blocos[bloco_atual] = random.sample(pool_b, k=min(10, len(pool_b)))
                             st.rerun()
