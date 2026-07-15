@@ -151,7 +151,7 @@ def gerar_40_questoes_aleatorias():
 
 
 # ==========================================
-# 7. CONFIGURAÇÃO DA INTERFACE & ESTILO CSS
+# 7. CONFIGURAÇÃO DA INTERFACE & ESTILIZAÇÃO CSS
 # ==========================================
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
@@ -191,6 +191,9 @@ if 'simulado_entregue' not in st.session_state:
     st.session_state.simulado_entregue = False
 if 'inicio_simulado' not in st.session_state:
     st.session_state.inicio_simulado = None
+
+if 'simulado_id' not in st.session_state:
+    st.session_state.simulado_id = random.randint(10000, 99999)
 
 # Área VIP
 if "vip_liberado" not in st.session_state:
@@ -273,21 +276,19 @@ elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
                 st.error(f"❌ Errado. Correto: **{q['correta']}**")
         st.divider()
 
-# --- ABA: SIMULADO REAL DE 40 QUESTÕES COM CRONÔMETRO INÉDITO ---
+# --- ABA: SIMULADO REAL DE 40 QUESTÕES COM CRONÔMETRO ---
 elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
     st.title("⏱️ Simulado Preparatório Oficial LPI (40 Questões)")
     
     if not nome_usuario:
         st.warning("👤 Por favor, insira o seu Nome na barra lateral para iniciar o Simulado Oficial.")
     else:
-        # Inicializa o marco de tempo se for uma nova tentativa
         if st.session_state.inicio_simulado is None:
             st.session_state.inicio_simulado = time.time()
             st.session_state.simulado_entregue = False
             st.session_state.respostas_simulado = {}
             st.session_state.questoes_simulado = gerar_40_questoes_aleatorias()
 
-        # Configura limite de tempo de 60 minutos (3600 segundos)
         tempo_limite_segundos = 3600
         decorrido = time.time() - st.session_state.inicio_simulado
         restante_segundos = max(0, int(tempo_limite_segundos - decorrido))
@@ -312,17 +313,17 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
 
         st.divider()
 
-        # Renderização sequencial sem quebras de layout
         for idx, q in enumerate(st.session_state.questoes_simulado):
             st.markdown(f"##### **Questão {idx + 1}** | `{q['topico']}`")
             st.markdown(f"**{q['pergunta']}**")
             
-            chave_resposta = f"s_ans_{q['id']}"
+            chave_resposta = f"ans_{st.session_state.simulado_id}_{q['id']}"
+            
             opcao_selecionada = st.radio(
                 "Alternativas:", 
                 q['opcoes'], 
                 index=None if chave_resposta not in st.session_state.respostas_simulado else q['opcoes'].index(st.session_state.respostas_simulado[chave_resposta]),
-                key=f"sim_radio_{idx}",
+                key=f"sim_radio_{st.session_state.simulado_id}_{idx}",
                 label_visibility="collapsed"
             )
             
@@ -340,7 +341,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
             else:
                 acertos = 0
                 for q in st.session_state.questoes_simulado:
-                    chave = f"s_ans_{q['id']}"
+                    chave = f"ans_{st.session_state.simulado_id}_{q['id']}"
                     resp = st.session_state.respostas_simulado.get(chave)
                     if resp == q['correta']:
                         acertos += 1
@@ -353,8 +354,8 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                     st.error("🚨 Você ficou abaixo de 70% de acertos. Continue estudando os tópicos indicados no gabarito.")
 
         with col_resetar:
-            # BOTÃO SOLICITADO PARA GERAR NOVO TESTE INÉDITO SEM DUPLICADOS
             if st.button("🔄 Gerar Novo Simulado (Inédito)", type="secondary", use_container_width=True):
+                st.session_state.simulado_id = random.randint(10000, 99999)
                 st.session_state.inicio_simulado = time.time()
                 st.session_state.simulado_entregue = False
                 st.session_state.respostas_simulado = {}
@@ -362,7 +363,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 st.balloons()
                 st.rerun()
 
-# --- ABA VIP: APOSTILAS & QUIZ NATIVO ---
+# --- ABA VIP: APOSTILAS & QUIZ NATIVO (COM OS DOIS BOTÕES DE DOWNLOADS) ---
 elif modo_selecionado == "🎁 Materiais VIP & Simulados":
     st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
     st.write("Materiais avançados mantidos pela SAMICOIOT.")
@@ -382,12 +383,14 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
         st.success("🎉 Parabéns! Seus conteúdos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns([1, 2])
         
-        # CARD 1: DOWNLOAD DO PDF
+        # CARD 1: DOWNLOAD DO PDF (APOSTILA PREMIUM & TERMINAL 2026)
         with col_apostila:
             with st.container(border=True):
-                st.subheader("📚 Apostila de Certificação VIP")
-                st.write("Material oficial completo com comandos Linux essenciais, mapas mentais de arquitetura e guias de redes.")
+                st.subheader("📚 Seus Livros & Materiais")
+                st.write("Materiais técnicos otimizados para a certificação.")
+                st.divider()
                 
+                # --- BOTÃO 1: APOSTILA PREMIUM ---
                 caminho_apostila = "Apostila Premium de Certificação Linux LPIC-1.pdf"
                 if os.path.exists(caminho_apostila):
                     with open(caminho_apostila, "rb") as file:
@@ -399,8 +402,25 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             use_container_width=True
                         )
                 else:
-                    st.warning("⚠️ O arquivo '" + caminho_apostila + "' não foi encontrado. Rode o script de geração primeiro.")
-                st.caption("Download local seguro mantido pela SAMICOIOT.")
+                    st.warning("⚠️ O arquivo '" + caminho_apostila + "' não foi localizado na pasta.")
+                
+                st.write("") # Espaçador visual
+                
+                # --- BOTÃO 2: TERMINAL 2026 ---
+                caminho_terminal = "LPIC-1_Terminal_2026.pdf"
+                if os.path.exists(caminho_terminal):
+                    with open(caminho_terminal, "rb") as file_t:
+                        st.download_button(
+                            label="📥 Baixar Terminal Blueprint 2026 (PDF)",
+                            data=file_t,
+                            file_name="LPIC-1_Terminal_2026.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                else:
+                    st.warning("⚠️ O arquivo '" + caminho_terminal + "' não foi localizado na pasta do seu servidor.")
+                
+                st.caption("Arquivos servidos diretamente pela SAMICOIOT.")
                 
         # CARD 2: SIMULADO VIP COMPLETAMENTE INTERATIVO E PROTEGIDO
         with col_simulado_vip:
@@ -445,7 +465,7 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                                 st.warning("Por favor, selecione uma alternativa antes de avançar.")
                 else:
                     st.balloons()
-                    st.success("🏆 Sensacional! Você concluuiu todas as etapas do Quiz VIP com sucesso!")
+                    st.success("🏆 Sensacional! Você concluiu todas as etapas do Quiz VIP com sucesso!")
                     if st.button("🔄 Reiniciar Simulado VIP", use_container_width=True):
                         st.session_state.indice_vip = 0
                         st.rerun()
