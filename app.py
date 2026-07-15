@@ -95,7 +95,7 @@ for i in range(101, 111):
         for q in pool:
             if isinstance(q, dict) and "pergunta" in q:
                 pergunta_norm = normalizar_texto(q["pergunta"])
-                if pergunta_norm not in preguntas_existentes:
+                if pergunta_norm not in perguntas_existentes:
                     preguntas_existentes.add(pergunta_norm)
                     q_copia = q.copy()
                     if "id" not in q_copia:
@@ -109,40 +109,28 @@ for i in range(101, 111):
 
 
 # ==========================================
-# 5. REPOSITÓRIO EXCLUSIVO DO QUIZ VIP (PROTEGIDO)
+# 5. POOL COMPLETO DO QUIZ VIP - 40 QUESTÕES EXCLUSIVAS PARA OS 4 BLOCOS
 # ==========================================
-QUESTOES_VIP_REPOSITORIO = [
-    {
-        "id": 901,
-        "pergunta": "Qual é a principal diferença entre os dispositivos do tipo 'Coldplug' e 'Hotplug'?",
-        "opcoes": [
-            "A. Dispositivos hotplug são identificados apenas no momento do POST da BIOS.",
-            "B. Dispositivos hotplug só podem ser conectados via porta USB 3.0.",
-            "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.",
-            "D. Coldplug é um termo usado exclusivamente para processadores e módulos de memória em servidores."
-        ],
-        "correta": "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.",
-        "dica": "Pense na temperatura operacional: 'Cold' (Frio/Desligado) e 'Hot' (Quente/Ligado em tempo de execução).",
-        "explicacao": "Dispositivos Coldplug exigem que o hardware esteja completamente desligado para evitar danos elétricos ou falhas de barramento, enquanto os Hotplug podem ser acoplados dinamicamente."
-    },
-    {
-        "id": 902,
-        "pergunta": "De acordo com a hierarquia do sistema de arquivos (FHS), qual é a finalidade principal do diretório /var?",
-        "opcoes": [
-            "A. Servir como ponto de montagem padrão para mídias removíveis.",
-            "B. Conter dados variáveis, como logs do sistema e arquivos de spool.",
-            "C. Armazenar arquivos estáticos do gerenciador de boot.",
-            "D. Abrigar comandos binários essenciais para todos os usuários."
-        ],
-        "correta": "B. Conter dados variáveis, como logs do sistema e arquivos de spool.",
-        "dica": "O nome vem de 'variable'. Pense em ficheiros cujo tamanho de armazenamento muda constantemente enquanto os serviços rodam.",
-        "explicacao": "O diretório /var armazena dados de tamanho altamente dinâmico e variável, como filas de e-mail, spools de impressão e os logs gerados em /var/log."
-    }
+# (Adicione ou importe aqui as 40 perguntas do seu Quiz do NotebookLM)
+QUESTOES_VIP_REPOSITORIO_COMPLETO = [
+    # Bloco 1
+    {"id": 901, "pergunta": "Qual é a principal diferença entre os dispositivos do tipo 'Coldplug' e 'Hotplug'?", "opcoes": ["A. Dispositivos hotplug são identificados apenas no momento do POST da BIOS.", "B. Dispositivos hotplug só podem ser conectados via porta USB 3.0.", "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "D. Coldplug é um termo usado exclusivamente para processadores em servidores."], "correta": "C. Dispositivos coldplug exigem que o sistema seja desligado para conexão ou remoção.", "dica": "Cold = Frio (Desligado) | Hot = Quente (Ligado).", "explicacao": "Sistemas Coldplug necessitam da máquina desligada para alteração física de hardware.", "bloco": 1},
+    {"id": 902, "pergunta": "De acordo com a hierarquia do sistema de arquivos (FHS), qual é a finalidade principal do diretório /var?", "opcoes": ["A. Servir como ponto de montagem padrão para mídias removíveis.", "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "C. Armazenar arquivos estáticos do gerenciador de boot.", "D. Abrigar comandos binários essenciais para todos os usuários."], "correta": "B. Conter dados variáveis, como logs do sistema e arquivos de spool.", "dica": "O nome vem de 'variable'.", "explicacao": "O /var é designado para conter logs, caches e spools.", "bloco": 1},
+    # (Inserir mais questões aqui com a chave "bloco": 1, 2, 3 ou 4 para completar as 10 por bloco)
 ]
 
+# Garantir fallback dinâmico caso falte alguma questão VIP
+while len(QUESTOES_VIP_REPOSITORIO_COMPLETO) < 40:
+    nova_q = random.choice(QUESTOES_POOL).copy()
+    nova_q["id"] = 1000 + len(QUESTOES_VIP_REPOSITORIO_COMPLETO)
+    nova_q["bloco"] = (len(QUESTOES_VIP_REPOSITORIO_COMPLETO) // 10) + 1
+    nova_q["dica"] = "Consulte o resumo do seu Guia de Estudos."
+    nova_q["explicacao"] = "Reveja a documentação oficial LPI."
+    QUESTOES_VIP_REPOSITORIO_COMPLETO.append(nova_q)
+
 
 # ==========================================
-# 6. FUNÇÃO GERADORA DE SIMULADO DINÂMICO (SEM DUPLICADOS)
+# 6. FUNÇÕES GERADORAS DE SIMULADO
 # ==========================================
 def gerar_40_questoes_aleatorias():
     pool_disponivel = list(QUESTOES_POOL)
@@ -151,7 +139,7 @@ def gerar_40_questoes_aleatorias():
 
 
 # ==========================================
-# 7. CONFIGURAÇÃO DA INTERFACE & ESTILIZAÇÃO CSS
+# 7. CONFIGURAÇÃO DA INTERFACE & ESTILO CSS
 # ==========================================
 st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
 
@@ -182,7 +170,6 @@ st.markdown("""
 if 'questoes_treino' not in st.session_state:
     st.session_state.questoes_treino = list(QUESTOES_POOL)
 
-# Inicializadores estruturados do simulado dinâmico
 if 'questoes_simulado' not in st.session_state:
     st.session_state.questoes_simulado = gerar_40_questoes_aleatorias()
 if 'respostas_simulado' not in st.session_state:
@@ -191,19 +178,31 @@ if 'simulado_entregue' not in st.session_state:
     st.session_state.simulado_entregue = False
 if 'inicio_simulado' not in st.session_state:
     st.session_state.inicio_simulado = None
-
 if 'simulado_id' not in st.session_state:
     st.session_state.simulado_id = random.randint(10000, 99999)
 
-# Área VIP
+# Estados da Área VIP com Gamificação por Blocos
 if "vip_liberado" not in st.session_state:
     st.session_state.vip_liberado = False
-if "indice_vip" not in st.session_state:
-    st.session_state.indice_vip = 0
+if "bloco_vip_atual" not in st.session_state:
+    st.session_state.bloco_vip_atual = 1
+if "indice_pergunta_bloco" not in st.session_state:
+    st.session_state.indice_pergunta_bloco = 0
+if "acertos_bloco_atual" not in st.session_state:
+    st.session_state.acertos_bloco_atual = 0
+if "questoes_sorteadas_blocos" not in st.session_state:
+    st.session_state.questoes_sorteadas_blocos = {}
+
+
+# Inicialização segura dos cadernos exclusivos de cada bloco (10 por bloco, sem repetição)
+if not st.session_state.questoes_sorteadas_blocos:
+    for b in range(1, 5):
+        pool_b = [q for q in QUESTOES_VIP_REPOSITORIO_COMPLETO if q["bloco"] == b]
+        st.session_state.questoes_sorteadas_blocos[b] = random.sample(pool_b, k=min(10, len(pool_b)))
 
 
 # ==========================================
-# 9. BARRA LATERAL (SIDEBAR COM AS 5 OPÇÕES COMPLETAS)
+# 9. BARRA LATERAL (SIDEBAR COM AS 5 OPÇÕES)
 # ==========================================
 num_online, num_visitas = gerenciar_acesso_e_obter_metricas()
 
@@ -363,7 +362,7 @@ elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
                 st.balloons()
                 st.rerun()
 
-# --- ABA VIP: APOSTILAS & QUIZ NATIVO (COM OS DOIS BOTÕES DE DOWNLOADS) ---
+# --- ABA VIP: MATERIAIS VIP & SISTEMA DE BLOCOS GAMIFICADOS ---
 elif modo_selecionado == "🎁 Materiais VIP & Simulados":
     st.title("🎁 Área VIP - Apostilas & Simulados Exclusivos")
     st.write("Materiais avançados mantidos pela SAMICOIOT.")
@@ -383,14 +382,13 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
         st.success("🎉 Parabéns! Seus conteúdos VIP estão totalmente desbloqueados.")
         col_apostila, col_simulado_vip = st.columns([1, 2])
         
-        # CARD 1: DOWNLOAD DO PDF (APOSTILA PREMIUM & TERMINAL 2026)
+        # CARD 1: DOWNLOAD DOS PDFs
         with col_apostila:
             with st.container(border=True):
                 st.subheader("📚 Seus Livros & Materiais")
                 st.write("Materiais técnicos otimizados para a certificação.")
                 st.divider()
                 
-                # --- BOTÃO 1: APOSTILA PREMIUM ---
                 caminho_apostila = "Apostila Premium de Certificação Linux LPIC-1.pdf"
                 if os.path.exists(caminho_apostila):
                     with open(caminho_apostila, "rb") as file:
@@ -404,9 +402,8 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                 else:
                     st.warning("⚠️ O arquivo '" + caminho_apostila + "' não foi localizado na pasta.")
                 
-                st.write("") # Espaçador visual
+                st.write("") 
                 
-                # --- BOTÃO 2: TERMINAL 2026 ---
                 caminho_terminal = "LPIC-1_Terminal_2026.pdf"
                 if os.path.exists(caminho_terminal):
                     with open(caminho_terminal, "rb") as file_t:
@@ -418,31 +415,35 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             use_container_width=True
                         )
                 else:
-                    st.warning("⚠️ O arquivo '" + caminho_terminal + "' não foi localizado na pasta do seu servidor.")
+                    st.warning("⚠️ O arquivo '" + caminho_terminal + "' não foi localizado.")
                 
                 st.caption("Arquivos servidos diretamente pela SAMICOIOT.")
                 
-        # CARD 2: SIMULADO VIP COMPLETAMENTE INTERATIVO E PROTEGIDO
+        # CARD 2: SIMULADO VIP GAMIFICADO (4 BLOCOS DE 10 QUESTÕES)
         with col_simulado_vip:
             with st.container(border=True):
-                st.subheader("🏆 Linux Quiz VIP (Nativo)")
-                st.write("Simulação interativa baseada nos seus tópicos avançados. Fontes originais 100% protegidas contra vazamento ou download.")
+                bloco_atual = st.session_state.bloco_vip_atual
+                
+                st.subheader(f"🏆 Linux Quiz VIP — Bloco {bloco_atual} de 4 (Nativo)")
+                st.write("Acerte no mínimo 7 questões para desbloquear a próxima fase.")
                 st.divider()
                 
-                idx = st.session_state.indice_vip
-                total_q = len(QUESTOES_VIP_REPOSITORIO)
+                # Resgata o caderno do bloco atual
+                caderno_atual = st.session_state.questoes_sorteadas_blocos[bloco_atual]
+                idx_q = st.session_state.indice_pergunta_bloco
+                total_q_bloco = len(caderno_atual)
                 
-                if idx < total_q:
-                    q_atual = QUESTOES_VIP_REPOSITORIO[idx]
+                if idx_q < total_q_bloco:
+                    q_atual = caderno_atual[idx_q]
                     
-                    st.markdown(f"<p style='color: #64748B; font-weight: bold;'>{idx + 1} / {total_q}</p>", unsafe_allow_html=True)
+                    st.markdown(f"<p style='color: #64748B; font-weight: bold;'>{idx_q + 1} / {total_q_bloco}</p>", unsafe_allow_html=True)
                     st.markdown(f"#### **{q_atual['pergunta']}**")
                     
                     escolha = st.radio(
                         "Selecione uma alternativa:",
                         q_atual['opcoes'],
                         index=None,
-                        key=f"vip_q_{idx}"
+                        key=f"vip_block_{bloco_atual}_q_{idx_q}"
                     )
                     
                     st.divider()
@@ -453,19 +454,48 @@ elif modo_selecionado == "🎁 Materiais VIP & Simulados":
                             st.info(q_atual["dica"])
                             
                     with col_prox:
+                        # Botão de Avançar
                         if st.button("Próxima Questão ➡️", use_container_width=True, type="primary"):
                             if escolha:
                                 if escolha == q_atual['correta']:
+                                    st.session_state.acertos_bloco_atual += 1
                                     st.toast("🎯 Resposta Correta!", icon="✅")
                                 else:
                                     st.toast("❌ Incorreto!", icon="🚨")
-                                st.session_state.indice_vip += 1
+                                st.session_state.indice_pergunta_bloco += 1
                                 st.rerun()
                             else:
                                 st.warning("Por favor, selecione uma alternativa antes de avançar.")
                 else:
-                    st.balloons()
-                    st.success("🏆 Sensacional! Você concluiu todas as etapas do Quiz VIP com sucesso!")
-                    if st.button("🔄 Reiniciar Simulado VIP", use_container_width=True):
-                        st.session_state.indice_vip = 0
-                        st.rerun()
+                    # Fim do Bloco: Avaliação de desempenho
+                    acertos = st.session_state.acertos_bloco_atual
+                    st.markdown(f"### Fim do Bloco {bloco_atual}!")
+                    st.markdown(f"Você acertou: **{acertos} / 10**")
+                    
+                    if acertos >= 7:
+                        if bloco_atual < 4:
+                            st.success(f"🎉 Excelente! Você passou para o Bloco {bloco_atual + 1}!")
+                            if st.button("Avançar para o Próximo Bloco ➡️", use_container_width=True, type="primary"):
+                                st.session_state.bloco_vip_atual += 1
+                                st.session_state.indice_pergunta_bloco = 0
+                                st.session_state.acertos_bloco_atual = 0
+                                st.rerun()
+                        else:
+                            st.balloons()
+                            st.success("🏆 SENSACIONAL! Você concluiu todos os 4 Blocos do Quiz VIP com sucesso!")
+                            if st.button("🔄 Reiniciar Toda a Jornada", use_container_width=True):
+                                st.session_state.bloco_vip_atual = 1
+                                st.session_state.indice_pergunta_bloco = 0
+                                st.session_state.acertos_bloco_atual = 0
+                                # Força novos sorteios aleatórios e inéditos
+                                st.session_state.questoes_sorteadas_blocos = {}
+                                st.rerun()
+                    else:
+                        st.error("🚨 Você não atingiu o mínimo de 7 acertos para passar de fase.")
+                        if st.button("🔄 Tentar Novamente este Bloco", use_container_width=True, type="primary"):
+                            st.session_state.indice_pergunta_bloco = 0
+                            st.session_state.acertos_bloco_atual = 0
+                            # Re-embaralha o bloco para a tentativa não ser igual
+                            pool_b = [q for q in QUESTOES_VIP_REPOSITORIO_COMPLETO if q["bloco"] == bloco_atual]
+                            st.session_state.questoes_sorteadas_blocos[bloco_atual] = random.sample(pool_b, k=min(10, len(pool_b)))
+                            st.rerun()
