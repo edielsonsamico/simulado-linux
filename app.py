@@ -245,7 +245,7 @@ if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
     st.title("ℹ️ Créditos & Desenvolvimento")
     with st.container(border=True):
         st.subheader("Edielson Samico")
-        st.write("Desenvolvedor de sistemas e engenheiro de infraestrutura na SAMICOIOT.")
+        st.write("SAMICOIOT.")
         st.divider()
         col_wa, col_ig, col_yt = st.columns(3)
         col_wa.link_button("💬 WhatsApp", "https://wa.me/5581987316454", use_container_width=True)
