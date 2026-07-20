@@ -34,19 +34,16 @@ def carregar_banco_unico():
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
-    # Inicialização de Estados
     if 'banco_questoes' not in st.session_state:
         st.session_state.banco_questoes = carregar_banco_unico()
         st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
     
-    if 'acesso_vip' not in st.session_state:
-        st.session_state.acesso_vip = False
-    
+    # Estados de Controle
+    if 'acesso_vip' not in st.session_state: st.session_state.acesso_vip = False
+    if 'clicou_no_cadastro' not in st.session_state: st.session_state.clicou_no_cadastro = False
     if 'senha_aleatoria' not in st.session_state:
-        # Gera uma senha aleatória de 6 dígitos
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
 
-    # MENU
     st.sidebar.title("Ambiente SAMICOIOT")
     modo = st.sidebar.radio("Selecione:", [
         "📖 Área de Treino (Geral)", 
@@ -56,7 +53,6 @@ def main():
         "ℹ️ Créditos & Desenvolvimento"
     ])
 
-    # LÓGICA DE EXIBIÇÃO (Treinos iguais aos anteriores)
     if modo == "📖 Área de Treino (Geral)":
         st.title("📖 Área de Treino Geral")
         for q in st.session_state.banco_questoes:
@@ -87,22 +83,26 @@ def main():
         st.title("🎁 Materiais VIP & Simulados")
         
         if not st.session_state.acesso_vip:
-            st.subheader("Conteúdo Exclusivo")
-            st.link_button("👉 INSCREVA-SE NO CANAL EDILSON SAMICO", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1")
+            st.subheader("Passo 1: Inscreva-se no Canal")
+            # Ao clicar aqui, o estado muda para True
+            if st.link_button("👉 INSCREVA-SE NO CANAL EDILSON SAMICO", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
+                st.session_state.clicou_no_cadastro = True
             
-            # Gerador de Senha Privado
-            with st.expander("Sou inscrito, como obtenho a senha?"):
-                st.write("Clique abaixo para gerar a senha de acesso atual:")
-                if st.button("Gerar/Ver Senha do Dia"):
-                    st.info(f"A senha atual é: **{st.session_state.senha_aleatoria}**")
-            
-            codigo = st.text_input("Insira o código gerado:", type="password")
-            if st.button("Validar Acesso"):
-                if codigo == st.session_state.senha_aleatoria:
-                    st.session_state.acesso_vip = True
-                    st.rerun()
-                else:
-                    st.error("Código incorreto.")
+            if st.session_state.clicou_no_cadastro:
+                st.success("Obrigado pela inscrição! Agora você pode gerar sua senha.")
+                st.subheader("Passo 2: Obter Senha")
+                if st.button("Gerar Senha de Acesso"):
+                    st.info(f"Senha: **{st.session_state.senha_aleatoria}**")
+                
+                codigo = st.text_input("Insira a senha:", type="password")
+                if st.button("Validar Acesso"):
+                    if codigo == st.session_state.senha_aleatoria:
+                        st.session_state.acesso_vip = True
+                        st.rerun()
+                    else:
+                        st.error("Senha incorreta.")
+            else:
+                st.warning("Clique no botão acima para liberar a geração da senha.")
         else:
             st.success("Acesso VIP Liberado!")
             materiais = {"Guia LPI": "#", "Simulado Avançado": "#"}
@@ -110,6 +110,7 @@ def main():
                 st.markdown(f"- [{nome}]({link})")
             if st.button("Sair da área VIP"):
                 st.session_state.acesso_vip = False
+                st.session_state.clicou_no_cadastro = False
                 st.rerun()
         
     elif modo == "ℹ️ Créditos & Desenvolvimento":
