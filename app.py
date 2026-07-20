@@ -21,16 +21,14 @@ def obter_opcoes_embaralhadas(q):
     state.shuffle(opcoes)
     return opcoes
 
-# ==========================================
-# 2. DADOS (MANTENHA A SUA ESTRUTURA)
-# ==========================================
+# Banco de dados
 QUESTOES_POOL = desduplicar_questoes([
     {"id": 1, "topico": "Tópico 101", "pergunta": "Qual comando PCI?", "opcoes": ["lspci", "lsusb", "lsmod", "dmesg"], "correta": "lspci"},
     {"id": 2, "topico": "Tópico 102", "pergunta": "Qual diretório FHS?", "opcoes": ["/etc", "/var", "/usr", "/opt"], "correta": "/etc"}
 ])
 
 # ==========================================
-# 3. ESTRUTURA DO APLICATIVO
+# 2. APLICATIVO
 # ==========================================
 st.set_page_config(page_title="Linux Essentials", layout="wide")
 
@@ -38,7 +36,6 @@ if 'iniciado' not in st.session_state:
     st.session_state.questoes_treino = QUESTOES_POOL
     st.session_state.iniciado = True
 
-# SIDEBAR
 modo = st.sidebar.radio("Ambiente:", [
     "📖 Área de Treino (Geral)", 
     "🎯 Treino por Tópico (Focado)", 
@@ -47,37 +44,46 @@ modo = st.sidebar.radio("Ambiente:", [
     "ℹ️ Créditos & Desenvolvimento"
 ])
 
-# CONTAINER PRINCIPAL PARA GARANTIR RENDERIZAÇÃO
-content_area = st.container()
+# --- ABA 1: TREINO GERAL ---
+if modo == "📖 Área de Treino (Geral)":
+    st.title("📖 Área de Treino Geral")
+    for idx, q in enumerate(st.session_state.questoes_treino):
+        opcoes = obter_opcoes_embaralhadas(q)
+        st.markdown(f"**{q['pergunta']}**")
+        res = st.radio(f"g_{idx}", opcoes, index=None, label_visibility="collapsed")
+        if res == q['correta']: st.success("🎯 Correto!")
+        elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
+        st.divider()
 
-with content_area:
-    if modo == "📖 Área de Treino (Geral)":
-        st.title("📖 Área de Treino Geral")
-        for idx, q in enumerate(st.session_state.questoes_treino):
-            opcoes = obter_opcoes_embaralhadas(q)
-            st.markdown(f"**{q['pergunta']}**")
-            res = st.radio(f"q_{idx}", opcoes, index=None, label_visibility="collapsed")
-            if res == q['correta']: st.success("🎯 Correto!")
-            elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
-            st.divider()
+# --- ABA 2: TREINO POR TÓPICO ---
+elif modo == "🎯 Treino por Tópico (Focado)":
+    st.title("🎯 Treino por Tópico (Focado)")
+    topicos = sorted(list(set(q['topico'] for q in QUESTOES_POOL)))
+    t = st.selectbox("Escolha o tópico:", topicos)
+    for idx, q in enumerate([q for q in QUESTOES_POOL if q['topico'] == t]):
+        opcoes = obter_opcoes_embaralhadas(q)
+        st.markdown(f"**{q['pergunta']}**")
+        res = st.radio(f"t_{idx}", opcoes, index=None, label_visibility="collapsed")
+        if res == q['correta']: st.success("🎯 Correto!")
+        elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
+        st.divider()
 
-    elif modo == "🎯 Treino por Tópico (Focado)":
-        st.title("🎯 Treino por Tópico (Focado)")
-        st.write("Aqui serão listadas as questões filtradas por tópico.")
+# --- ABA 3: SIMULADO ---
+elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
+    st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
+    simulado = random.sample(QUESTOES_POOL, k=min(40, len(QUESTOES_POOL)))
+    for idx, q in enumerate(simulado):
+        opcoes = obter_opcoes_embaralhadas(q)
+        st.markdown(f"**{idx+1}. {q['pergunta']}**")
+        st.radio(f"s_{idx}", opcoes, index=None, label_visibility="collapsed")
+        st.divider()
 
-    elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
-        st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
-        simulado = random.sample(st.session_state.questoes_treino, k=min(40, len(st.session_state.questoes_treino)))
-        for idx, q in enumerate(simulado):
-            opcoes = obter_opcoes_embaralhadas(q)
-            st.markdown(f"**{idx+1}. {q['pergunta']}**")
-            st.radio(f"s_{idx}", opcoes, index=None, label_visibility="collapsed")
-            st.divider()
+# --- ABA 4: VIP ---
+elif modo == "🎁 Materiais VIP & Simulados":
+    st.title("🎁 Materiais VIP & Simulados")
+    st.info("Conteúdo exclusivo disponível após inscrição.")
 
-    elif modo == "🎁 Materiais VIP & Simulados":
-        st.title("🎁 Materiais VIP & Simulados")
-        st.write("Conteúdo exclusivo da Área VIP.")
-
-    elif modo == "ℹ️ Créditos & Desenvolvimento":
-        st.title("ℹ️ Créditos & Desenvolvimento")
-        st.write("Desenvolvido por Edielson Samico.")
+# --- ABA 5: CRÉDITOS ---
+elif modo == "ℹ️ Créditos & Desenvolvimento":
+    st.title("ℹ️ Créditos & Desenvolvimento")
+    st.write("Desenvolvido por Edielson Samico.")
