@@ -4,25 +4,28 @@ import re
 import importlib
 
 # ==========================================
-# 1. FUNÇÕES DE LIMPEZA E LÓGICA (CORE)
+# 1. LÓGICA DE LIMPEZA (CORE)
 # ==========================================
 def normalizar_texto(texto):
+    # Remove prefixos numéricos de forma agressiva para identificar duplicatas
     texto_limpo = re.sub(r'^(quest[ãa]o(\s+avançada)?(\s+de\s+[a-z\s]+)?\s*\d+|q\d+|\d+)[:\.\-\s]+', '', texto.strip().lower())
     return " ".join(texto_limpo.split())
 
-def carregar_banco_de_dados():
-    pool_total = []
+def carregar_e_limpar_banco():
+    """Carrega de todos os tópicos e remove duplicatas na fonte."""
+    pool_bruto = []
     for i in range(101, 111):
         try:
             modulo = importlib.import_module(f"topico{i}")
             if hasattr(modulo, f"POOL_{i}"):
-                pool_total.extend(getattr(modulo, f"POOL_{i}"))
+                pool_bruto.extend(getattr(modulo, f"POOL_{i}"))
         except (ModuleNotFoundError, AttributeError):
             continue
     
+    # Filtro rigoroso: se a pergunta normalizada já existe, pula
     vistas = set()
     lista_limpa = []
-    for q in pool_total:
+    for q in pool_bruto:
         p = normalizar_texto(q["pergunta"])
         if p not in vistas:
             vistas.add(p)
@@ -35,16 +38,10 @@ def carregar_banco_de_dados():
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
-    # Inicialização SEGURA e PERSISTENTE
+    # Inicialização ÚNICA e LIMPA
     if 'banco_questoes' not in st.session_state:
-        st.session_state.banco_questoes = carregar_banco_de_dados()
-        # Salvamos o embaralhamento uma única vez na sessão
-        st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-        
-        # Pré-embaralha as opções de cada questão para que não mudem ao clicar
-        for q in st.session_state.banco_questoes:
-            q['opcoes_embaralhadas'] = q['opcoes'].copy()
-            random.shuffle(q['opcoes_embaralhadas'])
+        st.session_state.banco_questoes = carregar_e_limpar_banco()
+        st.session_state.iniciado = True
 
     st.sidebar.title("Ambiente SAMICOIOT")
     modo = st.sidebar.radio("Navegação:", [
@@ -62,8 +59,9 @@ def main():
         st.title("📖 Área de Treino Geral")
         for q in questoes:
             st.markdown(f"**{q['pergunta']}**")
-            # Usamos a opção já embaralhada e salva no estado
-            res = st.radio(f"treino_{q['id']}", q['opcoes_embaralhadas'], index=None, label_visibility="collapsed")
+            opcoes = q['opcoes'].copy()
+            random.shuffle(opcoes)
+            res = st.radio(f"t_{q['id']}", opcoes, index=None, label_visibility="collapsed")
             if res == q['correta']: st.success("🎯 Correto!")
             elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
             st.divider()
@@ -72,10 +70,12 @@ def main():
     elif modo == "🎯 Treino por Tópico (Focado)":
         st.title("🎯 Treino por Tópico (Focado)")
         topicos = sorted(list(set(q['topico'] for q in questoes)))
-        t = st.selectbox("Escolha o tópico:", topicos, key="select_topic_main")
+        t = st.selectbox("Escolha o tópico:", topicos, key="sel_topico")
         for q in [q for q in questoes if q['topico'] == t]:
             st.markdown(f"**{q['pergunta']}**")
-            res = st.radio(f"radio_{q['id']}_{t}", q['opcoes_embaralhadas'], index=None, label_visibility="collapsed")
+            opcoes = q['opcoes'].copy()
+            random.shuffle(opcoes)
+            res = st.radio(f"radio_{q['id']}_{t}", opcoes, index=None, label_visibility="collapsed")
             if res == q['correta']: st.success("🎯 Correto!")
             elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
             st.divider()
@@ -83,13 +83,20 @@ def main():
     # --- ABA 3: SIMULADO ---
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
         st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
-        if st.button("Gerar novo simulado (Inédito)"):
+        if st.button("Gerar novo simulado"):
+            # Garante que sorteia apenas das questões já limpas
             st.session_state.simulado_ativo = random.sample(questoes, k=min(40, len(questoes)))
             st.rerun()
             
+        # Garante que, se não existir, cria o primeiro simulado
+        if 'simulado_ativo' not in st.session_state:
+            st.session_state.simulado_ativo = random.sample(questoes, k=min(40, len(questoes)))
+
         for idx, q in enumerate(st.session_state.simulado_ativo):
-            st.markdown(f"**{idx+1}. {q['pergunta']}**")
-            st.radio(f"sim_{q['id']}", q['opcoes_embaralhadas'], index=None, label_visibility="collapsed")
+            st.markdown(f"**{q['pergunta']}**") # Removi o idx para não ter numerais
+            opcoes = q['opcoes'].copy()
+            random.shuffle(opcoes)
+            st.radio(f"sim_{q['id']}", opcoes, index=None, label_visibility="collapsed")
             st.divider()
 
     elif modo == "🎁 Materiais VIP & Simulados":
