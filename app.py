@@ -25,7 +25,6 @@ def carregar_e_limpar_banco():
         p = normalizar_texto(q["pergunta"])
         if p not in vistas:
             vistas.add(p)
-            # SALVAMOS O EMBARALHAMENTO JÁ AQUI, UMA ÚNICA VEZ
             q_copia = q.copy()
             q_copia['opcoes_fixas'] = q['opcoes'].copy()
             random.shuffle(q_copia['opcoes_fixas'])
@@ -46,21 +45,24 @@ def main():
     modo = st.sidebar.radio("Navegação:", [
         "📖 Área de Treino (Geral)", 
         "🎯 Treino por Tópico (Focado)", 
-        "⏱️ Simulado LPI (Prova Real 40 Q)"
+        "⏱️ Simulado LPI (Prova Real 40 Q)",
+        "🎁 Materiais VIP & Simulados",
+        "ℹ️ Créditos & Desenvolvimento"
     ])
 
-    # --- RENDERIZAÇÃO ESTÁVEL ---
+    # --- ABA 1: TREINO GERAL ---
     if modo == "📖 Área de Treino (Geral)":
         for q in st.session_state.banco_questoes:
             st.markdown(f"**{q['pergunta']}**")
-            # Usa a lista fixada no banco de dados (q['opcoes_fixas'])
             res = st.radio(f"t_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             if res == q['correta']: st.success("🎯 Correto!")
             elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
             st.divider()
 
+    # --- ABA 2: TREINO TÓPICO ---
     elif modo == "🎯 Treino por Tópico (Focado)":
-        t = st.selectbox("Escolha o tópico:", sorted(list(set(q['topico'] for q in st.session_state.banco_questoes))), key="sel_t")
+        topicos = sorted(list(set(q['topico'] for q in st.session_state.banco_questoes)))
+        t = st.selectbox("Escolha o tópico:", topicos, key="sel_t")
         for q in [q for q in st.session_state.banco_questoes if q['topico'] == t]:
             st.markdown(f"**{q['pergunta']}**")
             res = st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
@@ -68,14 +70,26 @@ def main():
             elif res: st.error(f"❌ Errado. Certo: {q['correta']}")
             st.divider()
 
+    # --- ABA 3: SIMULADO ---
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
         if st.button("Gerar novo simulado"):
             st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
             st.rerun()
-        for q in st.session_state.simulado_ativo:
+        for idx, q in enumerate(st.session_state.simulado_ativo):
             st.markdown(f"**{q['pergunta']}**")
-            st.radio(f"sim_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            # A chave agora é simples e única para cada questão do simulado
+            st.radio(f"sim_{idx}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
+
+    # --- ABA 4: VIP ---
+    elif modo == "🎁 Materiais VIP & Simulados":
+        st.title("Materiais VIP")
+        st.info("Conteúdo exclusivo para membros.")
+
+    # --- ABA 5: CRÉDITOS ---
+    elif modo == "ℹ️ Créditos & Desenvolvimento":
+        st.title("Créditos")
+        st.write("Desenvolvido por Edielson Samico.")
 
 if __name__ == "__main__":
     main()
