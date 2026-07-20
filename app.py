@@ -44,10 +44,10 @@ def main():
     if 'clicou_no_cadastro' not in st.session_state: st.session_state.clicou_no_cadastro = False
     if 'senha_aleatoria' not in st.session_state:
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
-    
-    # Estado do Cronômetro
     if 'inicio_simulado' not in st.session_state:
         st.session_state.inicio_simulado = time.time()
+    if 'simulado_finalizado' not in st.session_state:
+        st.session_state.simulado_finalizado = False
 
     # MENU
     st.sidebar.title("Ambiente SAMICOIOT")
@@ -78,34 +78,42 @@ def main():
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
         st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
         
-        # Lógica do Cronômetro
-        col1, col2 = st.columns([1, 4])
-        with col1:
-            tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
-            minutos = tempo_decorrido // 60
-            segundos = tempo_decorrido % 60
-            st.metric("Tempo Decorrido", f"{minutos:02d}:{segundos:02d}")
+        if not st.session_state.simulado_finalizado:
+            col1, col2 = st.columns([1, 4])
+            with col1:
+                tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
+                st.metric("Tempo Decorrido", f"{tempo_decorrido // 60:02d}:{tempo_decorrido % 60:02d}")
             
-        if st.button("Gerar novo simulado"):
-            st.session_state.inicio_simulado = time.time() # Reseta o tempo
-            st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-            st.rerun()
+            if st.button("Gerar novo simulado"):
+                st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.rerun()
+                
+            for i, q in enumerate(st.session_state.simulado_ativo):
+                st.markdown(f"**{i+1}. {q['pergunta']}**")
+                st.radio(f"sim_{q['id']}", q['opcoes_fixas'], key=f"ans_{i}", index=None, label_visibility="collapsed")
+                st.divider()
             
-        for i, q in enumerate(st.session_state.simulado_ativo):
-            st.markdown(f"**{i+1}. {q['pergunta']}**")
-            st.radio(f"sim_{q['id']}", q['opcoes_fixas'], key=f"ans_{i}", index=None, label_visibility="collapsed")
-            st.divider()
-            
+            if st.button("Finalizar Simulado"):
+                st.session_state.tempo_final = time.time() - st.session_state.inicio_simulado
+                st.session_state.simulado_finalizado = True
+                st.rerun()
+        else:
+            st.success(f"Simulado finalizado! Tempo total: {int(st.session_state.tempo_final // 60)}m {int(st.session_state.tempo_final % 60)}s")
+            if st.button("Reiniciar Simulado"):
+                st.session_state.simulado_finalizado = False
+                st.session_state.inicio_simulado = time.time()
+                st.rerun()
+
     elif modo == "🎁 Materiais VIP & Simulados":
-        st.title("🎁 Materiais VIP & Simulados")
         # ... (Mantém a lógica VIP anterior)
+        st.title("🎁 Materiais VIP & Simulados")
         if not st.session_state.acesso_vip:
-            st.subheader("Conteúdo Exclusivo para Inscritos")
             if st.link_button("👉 INSCREVA-SE NO CANAL EDILSON SAMICO", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
                 st.session_state.clicou_no_cadastro = True
             if st.session_state.clicou_no_cadastro:
                 if st.button("Gerar Senha de Acesso"):
-                    st.info(f"A senha é: **{st.session_state.senha_aleatoria}**")
+                    st.info(f"Senha: **{st.session_state.senha_aleatoria}**")
                 codigo = st.text_input("Insira a senha:", type="password")
                 if st.button("Validar Acesso"):
                     if codigo == st.session_state.senha_aleatoria:
@@ -113,15 +121,11 @@ def main():
                         st.rerun()
         else:
             st.success("Acesso VIP Liberado!")
-            materiais = {
-                "Apostila Premium de Certificação": "Apostila_Premium_de_Certificacao.pdf",
-                "LPIC-1 Terminal 2026": "LPIC-1_Terminal_2026.pdf"
-            }
+            materiais = {"Apostila Premium": "Apostila_Premium_de_Certificacao.pdf", "LPIC-1 Terminal": "LPIC-1_Terminal_2026.pdf"}
             for nome, link in materiais.items():
                 st.markdown(f"- [{nome}]({link})")
             if st.button("Sair da área VIP"):
                 st.session_state.acesso_vip = False
-                st.session_state.clicou_no_cadastro = False
                 st.rerun()
         
     elif modo == "ℹ️ Créditos & Desenvolvimento":
