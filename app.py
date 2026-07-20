@@ -6,16 +6,12 @@ import hashlib
 
 # 1. FUNÇÃO DE LIMPEZA E HASH (AGRUPAMENTO POR NÚCLEO)
 def gerar_hash_conteudo(pergunta):
-    """
-    Cria uma impressão digital ignorando números de questão e numerações iniciais.
-    """
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def carregar_banco_unico():
     pool_total = []
-    # Tenta carregar módulos de tópicos de 101 a 110
     for i in range(101, 111):
         try:
             modulo = importlib.import_module(f"topico{i}")
@@ -33,7 +29,7 @@ def carregar_banco_unico():
             banco_final[h] = q_copia
     return list(banco_final.values())
 
-# 2. APP PRINCIPAL COM MENU COMPLETO E CORREÇÃO VIP
+# 2. APP PRINCIPAL
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
@@ -43,6 +39,10 @@ def main():
             st.session_state.banco_questoes, 
             k=min(40, len(st.session_state.banco_questoes))
         )
+    
+    # Variável de estado para controle de acesso VIP
+    if 'acesso_vip' not in st.session_state:
+        st.session_state.acesso_vip = False
 
     # MENU COMPLETO E FIXO
     st.sidebar.title("Ambiente SAMICOIOT")
@@ -92,16 +92,30 @@ def main():
             
     elif modo == "🎁 Materiais VIP & Simulados":
         st.title("🎁 Materiais VIP & Simulados")
-        st.subheader("Conteúdo Exclusivo")
-        # Substitua os links abaixo pelos endereços reais dos seus materiais
-        materiais = {
-            "Guia de Comandos LPI": "#",
-            "Simulado LPI - Módulos Avançados": "#",
-            "Acesso à Área de Membros": "#"
-        }
-        for nome, link in materiais.items():
-            st.markdown(f"- [{nome}]({link})")
-        st.warning("Área restrita. Certifique-se de estar logado.")
+        
+        if not st.session_state.acesso_vip:
+            st.subheader("Conteúdo Exclusivo para Inscritos")
+            st.write("Para acessar os materiais VIP, insira o código de acesso fornecido no seu cadastro em nosso canal:")
+            codigo = st.text_input("Código de Acesso:", type="password")
+            if st.button("Validar Código"):
+                # Defina aqui o seu código de acesso (ex: "SAMICO123")
+                if codigo == "SAMICO123":
+                    st.session_state.acesso_vip = True
+                    st.rerun()
+                else:
+                    st.error("Código inválido. Verifique se você está inscrito no canal.")
+        else:
+            st.success("Acesso VIP Liberado!")
+            materiais = {
+                "Guia de Comandos LPI": "#",
+                "Simulado LPI - Módulos Avançados": "#",
+                "Acesso à Área de Membros": "#"
+            }
+            for nome, link in materiais.items():
+                st.markdown(f"- [{nome}]({link})")
+            if st.button("Sair da área VIP"):
+                st.session_state.acesso_vip = False
+                st.rerun()
         
     elif modo == "ℹ️ Créditos & Desenvolvimento":
         st.title("ℹ️ Créditos & Desenvolvimento")
