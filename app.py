@@ -4,51 +4,67 @@ import time
 import os
 
 # ==========================================
-# 1. FUNÇÕES DE APOIO E EMBARALHAMENTO
+# 1. FUNÇÕES DE EMBARALHAMENTO (SEMENTE ÚNICA)
 # ==========================================
-def embaralhar_opcoes(questao):
-    """Cria uma cópia da questão com as opções embaralhadas."""
-    opcoes = questao['opcoes'].copy()
-    correta = questao['correta']
-    random.shuffle(opcoes)
-    return {**questao, 'opcoes': opcoes, 'correta': correta}
-
-# (Mantenha aqui as funções gerenciar_acesso_e_obter_metricas, normalizar_texto, desduplicar_questoes do código anterior)
-
-# ==========================================
-# 2. LOGIC DE QUIZ (APLICADA EM TODOS OS MODOS)
-# ==========================================
-# Sempre que for exibir uma questão, use:
-# q = embaralhar_opcoes(q_original)
-# st.radio("Alternativas:", q['opcoes'], ...)
+def obter_opcoes_embaralhadas(q):
+    """Embaralha as opções usando o ID da questão como semente para manter consistência."""
+    opcoes = q['opcoes'].copy()
+    # Usamos o ID da questão como semente para a ordem ser sempre a mesma 
+    # para aquela questão específica durante a sessão, mas variada entre questões.
+    state = random.Random(q['id'])
+    state.shuffle(opcoes)
+    return opcoes
 
 # ==========================================
-# 3. EXEMPLO DE APLICAÇÃO NO TREINO POR TÓPICO
+# 2. CONFIGURAÇÃO DA INTERFACE & MÓDULOS (MANTENHA SUAS FUNÇÕES ORIGINAIS)
 # ==========================================
-# Substitua o bloco do "Treino por Tópico (Focado)" no seu código por este:
+st.set_page_config(page_title="Linux Essentials - Plataforma de Estudos", page_icon="🐧", layout="wide")
+
+# ... (Mantenha as suas funções 'gerenciar_acesso_e_obter_metricas', 'desduplicar_questoes', etc.) ...
+
+# ==========================================
+# 3. BARRA LATERAL
+# ==========================================
+modo_selecionado = st.sidebar.radio(
+    "Ambiente:", 
+    [
+        "📖 Área de Treino (Geral)", 
+        "🎯 Treino por Tópico (Focado)", 
+        "⏱️ Simulado LPI (Prova Real 40 Q)",
+        "🎁 Materiais VIP & Simulados",
+        "ℹ️ Créditos & Desenvolvimento"
+    ]
+)
+
+# ==========================================
+# 4. ESTRUTURA CORRETA DOS ELIFs (SOLUÇÃO DO ERRO)
+# ==========================================
+if modo_selecionado == "ℹ️ Créditos & Desenvolvimento":
+    st.title("ℹ️ Créditos & Desenvolvimento")
+    # ... (seu conteúdo)
+
+elif modo_selecionado == "📖 Área de Treino (Geral)":
+    st.title("📖 Área de Treino Geral")
+    for idx, q in enumerate(st.session_state.questoes_treino):
+        opcoes_embaralhadas = obter_opcoes_embaralhadas(q)
+        st.markdown(f"### Questão {idx + 1} | `{q['topico']}`")
+        st.markdown(f"**{q['pergunta']}**")
+        resposta = st.radio("Opções:", opcoes_embaralhadas, index=None, key=f"t_{idx}")
+        if resposta:
+            if resposta == q['correta']:
+                st.success("🎯 Resposta Correta!")
+            else:
+                st.error(f"❌ Incorreta. Certo: **{q['correta']}**")
+        st.divider()
 
 elif modo_selecionado == "🎯 Treino por Tópico (Focado)":
     st.title("🎯 Treino Direcionado por Tópicos")
-    topicos_disponiveis = sorted(list(set([q['topico'] for q in QUESTOES_POOL])))
-    topico_escolhido = st.selectbox("Escolha o tópico desejado:", topicos_disponiveis)
-    questoes_filtradas = [q for q in QUESTOES_POOL if q['topico'] == topico_escolhido]
-    
-    for idx, q_orig in enumerate(questoes_filtradas):
-        # EMBARALHA AS OPÇÕES A CADA RENDERIZAÇÃO
-        q = embaralhar_opcoes(q_orig) 
-        
-        st.markdown(f"### Questão {idx + 1}")
-        st.markdown(f"**{q['pergunta']}**")
-        
-        resposta = st.radio("Selecione a alternativa:", q['opcoes'], index=None, key=f"f_{idx}")
-        if resposta:
-            if resposta == q['correta']:
-                st.success("🎯 Correto!")
-            else:
-                st.error(f"❌ Errado. Correto: **{q['correta']}**")
-        st.divider()
+    # ... (seu código de tópicos usando: opcoes = obter_opcoes_embaralhadas(q))
 
-# ==========================================
-# APLIQUE O MESMO PADRÃO (q = embaralhar_opcoes(q_orig)) 
-# EM TODAS AS ABAS DE TREINO E SIMULADO DO SEU CÓDIGO
-# ==========================================
+elif modo_selecionado == "⏱️ Simulado LPI (Prova Real 40 Q)":
+    st.title("⏱️ Simulado Preparatório Oficial LPI")
+    # ... (seu código do simulado usando: opcoes = obter_opcoes_embaralhadas(q))
+
+elif modo_selecionado == "🎁 Materiais VIP & Simulados":
+    st.title("🎁 Área VIP")
+    # ... (seu código da área VIP)
