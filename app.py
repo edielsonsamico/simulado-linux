@@ -5,7 +5,7 @@ import importlib
 import hashlib
 import string
 
-# 1. FUNÇÃO DE LIMPEZA E HASH
+# 1. FUNÇÃO DE LIMPEZA E HASH (AGRUPAMENTO POR NÚCLEO)
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
@@ -38,14 +38,14 @@ def main():
         st.session_state.banco_questoes = carregar_banco_unico()
         st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
     
-    # Estados de Controle
     if 'acesso_vip' not in st.session_state: st.session_state.acesso_vip = False
     if 'clicou_no_cadastro' not in st.session_state: st.session_state.clicou_no_cadastro = False
     if 'senha_aleatoria' not in st.session_state:
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
 
+    # MENU
     st.sidebar.title("Ambiente SAMICOIOT")
-    modo = st.sidebar.radio("Selecione:", [
+    modo = st.sidebar.radio("Navegação:", [
         "📖 Área de Treino (Geral)", 
         "🎯 Treino por Tópico (Focado)", 
         "⏱️ Simulado LPI (Prova Real 40 Q)",
@@ -70,6 +70,7 @@ def main():
             st.divider()
 
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
+        # Relógio adicionado ao título abaixo:
         st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
         if st.button("Gerar novo simulado"):
             st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
@@ -81,19 +82,14 @@ def main():
             
     elif modo == "🎁 Materiais VIP & Simulados":
         st.title("🎁 Materiais VIP & Simulados")
-        
         if not st.session_state.acesso_vip:
-            st.subheader("Passo 1: Inscreva-se no Canal")
-            # Ao clicar aqui, o estado muda para True
+            st.subheader("Conteúdo Exclusivo para Inscritos")
             if st.link_button("👉 INSCREVA-SE NO CANAL EDILSON SAMICO", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
                 st.session_state.clicou_no_cadastro = True
-            
             if st.session_state.clicou_no_cadastro:
-                st.success("Obrigado pela inscrição! Agora você pode gerar sua senha.")
-                st.subheader("Passo 2: Obter Senha")
+                st.write("---")
                 if st.button("Gerar Senha de Acesso"):
-                    st.info(f"Senha: **{st.session_state.senha_aleatoria}**")
-                
+                    st.info(f"A senha atual é: **{st.session_state.senha_aleatoria}**")
                 codigo = st.text_input("Insira a senha:", type="password")
                 if st.button("Validar Acesso"):
                     if codigo == st.session_state.senha_aleatoria:
@@ -101,11 +97,12 @@ def main():
                         st.rerun()
                     else:
                         st.error("Senha incorreta.")
-            else:
-                st.warning("Clique no botão acima para liberar a geração da senha.")
         else:
             st.success("Acesso VIP Liberado!")
-            materiais = {"Guia LPI": "#", "Simulado Avançado": "#"}
+            materiais = {
+                "Apostila Premium de Certificação": "Apostila_Premium_de_Certificacao.pdf",
+                "LPIC-1 Terminal 2026": "LPIC-1_Terminal_2026.pdf"
+            }
             for nome, link in materiais.items():
                 st.markdown(f"- [{nome}]({link})")
             if st.button("Sair da área VIP"):
