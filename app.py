@@ -2,14 +2,16 @@ import streamlit as st
 import random
 import re
 import importlib
+import hashlib
 
 # ==========================================
-# 1. FUNÇÃO DE LIMPEZA E GARANTIA DE ÚNICOS
+# 1. FUNÇÃO DE LIMPEZA E HASH (NÃO DÁ PRA ERRAR)
 # ==========================================
-def normalizar_texto(texto):
-    # Remove prefixos numéricos agressivamente
-    texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)[:\.\-\s]+', '', texto.strip().lower())
-    return " ".join(texto_limpo.split())
+def criar_hash_pergunta(texto):
+    """Cria uma impressão digital única da pergunta."""
+    # Remove TUDO que não for letra ou número antes de criar o hash
+    texto_limpo = re.sub(r'[^a-zA-Z0-9]', '', texto.lower())
+    return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def carregar_e_limpar_banco():
     pool_total = []
@@ -20,15 +22,16 @@ def carregar_e_limpar_banco():
                 pool_total.extend(getattr(modulo, f"POOL_{i}"))
         except: continue
     
-    # Dicionário para garantir que apenas uma versão de cada pergunta sobreviva
+    # Dicionário usando o Hash como chave única
     banco_unico = {}
     for q in pool_total:
-        p = normalizar_texto(q["pergunta"])
-        if p not in banco_unico:
+        h = criar_hash_pergunta(q["pergunta"])
+        if h not in banco_unico:
             q_copia = q.copy()
+            # Embaralhamento único e persistente
             q_copia['opcoes_fixas'] = q['opcoes'].copy()
             random.shuffle(q_copia['opcoes_fixas'])
-            banco_unico[p] = q_copia
+            banco_unico[h] = q_copia
             
     return list(banco_unico.values())
 
@@ -40,7 +43,6 @@ def main():
 
     if 'banco_questoes' not in st.session_state:
         st.session_state.banco_questoes = carregar_e_limpar_banco()
-        # Garante que o simulado comece com 40 questões únicas ou o máximo disponível
         st.session_state.simulado_ativo = random.sample(
             st.session_state.banco_questoes, 
             k=min(40, len(st.session_state.banco_questoes))
@@ -55,12 +57,13 @@ def main():
         "ℹ️ Créditos & Desenvolvimento"
     ])
 
+    # --- RENDERIZAÇÃO ESTÁVEL ---
     if modo == "📖 Área de Treino (Geral)":
         for q in st.session_state.banco_questoes:
             st.markdown(f"**{q['pergunta']}**")
             res = st.radio(f"t_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             if res == q['correta']: st.success("🎯 Correto!")
-            elif res: st.error(f"❌ Errado.")
+            elif res: st.error("❌ Errado.")
             st.divider()
 
     elif modo == "🎯 Treino por Tópico (Focado)":
@@ -70,7 +73,7 @@ def main():
             st.markdown(f"**{q['pergunta']}**")
             res = st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             if res == q['correta']: st.success("🎯 Correto!")
-            elif res: st.error(f"❌ Errado.")
+            elif res: st.error("❌ Errado.")
             st.divider()
 
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
@@ -81,10 +84,11 @@ def main():
             )
             st.rerun()
         
-        # Renderização do simulado garantido sem duplicatas
+        # Renderização do simulado final
         for i, q in enumerate(st.session_state.simulado_ativo):
             st.markdown(f"**{q['pergunta']}**")
-            st.radio(f"sim_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            # A chave inclui o ID original da questão para garantir unicidade
+            st.radio(f"sim_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
 
     elif modo == "🎁 Materiais VIP & Simulados":
