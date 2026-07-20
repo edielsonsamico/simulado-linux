@@ -6,12 +6,16 @@ import hashlib
 
 # 1. FUNÇÃO DE LIMPEZA E HASH (AGRUPAMENTO POR NÚCLEO)
 def gerar_hash_conteudo(pergunta):
-    texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)[:\.\-\s]+', '', pergunta.strip(), flags=re.IGNORECASE)
+    """
+    Cria uma impressão digital ignorando números de questão e numerações iniciais.
+    """
+    texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def carregar_banco_unico():
     pool_total = []
+    # Tenta carregar módulos de tópicos de 101 a 110
     for i in range(101, 111):
         try:
             modulo = importlib.import_module(f"topico{i}")
@@ -24,12 +28,12 @@ def carregar_banco_unico():
         h = gerar_hash_conteudo(q["pergunta"])
         if h not in banco_final:
             q_copia = q.copy()
-            q_copia['opcoes_fixas'] = q['opcoes'].copy()
+            q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             banco_final[h] = q_copia
     return list(banco_final.values())
 
-# 2. APP PRINCIPAL COM MENU COMPLETO
+# 2. APP PRINCIPAL COM MENU COMPLETO E CORREÇÃO VIP
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
@@ -65,9 +69,9 @@ def main():
 
     elif modo == "🎯 Treino por Tópico (Focado)":
         st.title("🎯 Treino por Tópico (Focado)")
-        topicos = sorted(list(set(q['topico'] for q in st.session_state.banco_questoes)))
+        topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_questoes)))
         t = st.selectbox("Escolha o tópico:", topicos, key="sel_t")
-        for q in [q for q in st.session_state.banco_questoes if q['topico'] == t]:
+        for q in [q for q in st.session_state.banco_questoes if q.get('topico') == t]:
             st.markdown(f"**{q['pergunta']}**")
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
@@ -88,7 +92,16 @@ def main():
             
     elif modo == "🎁 Materiais VIP & Simulados":
         st.title("🎁 Materiais VIP & Simulados")
-        st.info("Conteúdo exclusivo para membros.")
+        st.subheader("Conteúdo Exclusivo")
+        # Substitua os links abaixo pelos endereços reais dos seus materiais
+        materiais = {
+            "Guia de Comandos LPI": "#",
+            "Simulado LPI - Módulos Avançados": "#",
+            "Acesso à Área de Membros": "#"
+        }
+        for nome, link in materiais.items():
+            st.markdown(f"- [{nome}]({link})")
+        st.warning("Área restrita. Certifique-se de estar logado.")
         
     elif modo == "ℹ️ Créditos & Desenvolvimento":
         st.title("ℹ️ Créditos & Desenvolvimento")
