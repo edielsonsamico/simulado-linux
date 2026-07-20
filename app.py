@@ -2,18 +2,17 @@ import streamlit as st
 import random
 import re
 import importlib
-import hashlib
 
 # ==========================================
-# 1. FUNÇÃO DE LIMPEZA E HASH (NÃO DÁ PRA ERRAR)
+# 1. LIMPEZA PROFUNDA (ESTRATÉGIA DE NÚCLEO)
 # ==========================================
-def criar_hash_pergunta(texto):
-    """Cria uma impressão digital única da pergunta."""
-    # Remove TUDO que não for letra ou número antes de criar o hash
-    texto_limpo = re.sub(r'[^a-zA-Z0-9]', '', texto.lower())
-    return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
+def extrair_nucleo_pergunta(pergunta):
+    """Remove numerações, prefixos e identificadores para encontrar o núcleo da questão."""
+    # Remove: "Questão Avançada de X 123:", "Questão 123:", "123." etc.
+    nucleo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)[:\.\-\s]+', '', pergunta.strip(), flags=re.IGNORECASE)
+    return nucleo.strip().lower()
 
-def carregar_e_limpar_banco():
+def carregar_banco_unico():
     pool_total = []
     for i in range(101, 111):
         try:
@@ -22,18 +21,18 @@ def carregar_e_limpar_banco():
                 pool_total.extend(getattr(modulo, f"POOL_{i}"))
         except: continue
     
-    # Dicionário usando o Hash como chave única
-    banco_unico = {}
+    # Dicionário de controle: A chave é o "núcleo" da pergunta
+    banco_final = {}
     for q in pool_total:
-        h = criar_hash_pergunta(q["pergunta"])
-        if h not in banco_unico:
+        nucleo = extrair_nucleo_pergunta(q["pergunta"])
+        if nucleo not in banco_final:
             q_copia = q.copy()
-            # Embaralhamento único e persistente
+            # Pré-embaralha as opções uma única vez
             q_copia['opcoes_fixas'] = q['opcoes'].copy()
             random.shuffle(q_copia['opcoes_fixas'])
-            banco_unico[h] = q_copia
+            banco_final[nucleo] = q_copia
             
-    return list(banco_unico.values())
+    return list(banco_final.values())
 
 # ==========================================
 # 2. APP PRINCIPAL
@@ -42,7 +41,7 @@ def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
     if 'banco_questoes' not in st.session_state:
-        st.session_state.banco_questoes = carregar_e_limpar_banco()
+        st.session_state.banco_questoes = carregar_banco_unico()
         st.session_state.simulado_ativo = random.sample(
             st.session_state.banco_questoes, 
             k=min(40, len(st.session_state.banco_questoes))
@@ -57,7 +56,6 @@ def main():
         "ℹ️ Créditos & Desenvolvimento"
     ])
 
-    # --- RENDERIZAÇÃO ESTÁVEL ---
     if modo == "📖 Área de Treino (Geral)":
         for q in st.session_state.banco_questoes:
             st.markdown(f"**{q['pergunta']}**")
@@ -84,11 +82,10 @@ def main():
             )
             st.rerun()
         
-        # Renderização do simulado final
         for i, q in enumerate(st.session_state.simulado_ativo):
             st.markdown(f"**{q['pergunta']}**")
-            # A chave inclui o ID original da questão para garantir unicidade
-            st.radio(f"sim_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            # A chave única combina o índice e o ID para evitar erro de estado
+            st.radio(f"sim_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
 
     elif modo == "🎁 Materiais VIP & Simulados":
