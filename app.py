@@ -4,7 +4,7 @@ import re
 import importlib
 import hashlib
 
-# 1. FUNÇÃO DE LIMPEZA E HASH (AGRUPAMENTO POR NÚCLEO)
+# 1. FUNÇÃO DE LIMPEZA E HASH
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
@@ -40,7 +40,6 @@ def main():
             k=min(40, len(st.session_state.banco_questoes))
         )
     
-    # Variável de estado para controle de acesso VIP
     if 'acesso_vip' not in st.session_state:
         st.session_state.acesso_vip = False
 
@@ -95,21 +94,25 @@ def main():
         
         if not st.session_state.acesso_vip:
             st.subheader("Conteúdo Exclusivo para Inscritos")
-            st.write("Para acessar os materiais VIP, insira o código de acesso fornecido no seu cadastro em nosso canal:")
-            codigo = st.text_input("Código de Acesso:", type="password")
-            if st.button("Validar Código"):
-                # Defina aqui o seu código de acesso (ex: "SAMICO123")
-                if codigo == "SAMICO123":
+            st.write("Para acessar nossos simulados e materiais, inscreva-se em nosso canal e valide seu acesso.")
+            
+            # Botão que leva direto ao seu canal
+            st.link_button("👉 INSCREVA-SE NO CANAL EDILSON SAMICO", "https://www.youtube.com/@EdielsonSamico")
+            
+            st.write("---")
+            codigo = st.text_input("Insira o código de validação recebido após a inscrição:", type="password")
+            if st.button("Validar Acesso"):
+                if codigo == "SAMICO123": # Altere este código conforme sua preferência
                     st.session_state.acesso_vip = True
                     st.rerun()
                 else:
-                    st.error("Código inválido. Verifique se você está inscrito no canal.")
+                    st.error("Código incorreto. Certifique-se de estar inscrito!")
         else:
             st.success("Acesso VIP Liberado!")
             materiais = {
                 "Guia de Comandos LPI": "#",
                 "Simulado LPI - Módulos Avançados": "#",
-                "Acesso à Área de Membros": "#"
+                "Área de Membros": "#"
             }
             for nome, link in materiais.items():
                 st.markdown(f"- [{nome}]({link})")
