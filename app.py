@@ -2,15 +2,18 @@ import streamlit as st
 import random
 import re
 import importlib
+import hashlib
 
 # ==========================================
-# 1. LIMPEZA PROFUNDA (ESTRATÉGIA DE NÚCLEO)
+# 1. LÓGICA DE LIMPEZA E AGRUPAMENTO
 # ==========================================
-def extrair_nucleo_pergunta(pergunta):
-    """Remove numerações, prefixos e identificadores para encontrar o núcleo da questão."""
-    # Remove: "Questão Avançada de X 123:", "Questão 123:", "123." etc.
-    nucleo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)[:\.\-\s]+', '', pergunta.strip(), flags=re.IGNORECASE)
-    return nucleo.strip().lower()
+def gerar_hash_conteudo(pergunta):
+    """Cria uma impressão digital apenas do texto, ignorando a numeração."""
+    # Remove qualquer sequência de números no início da string
+    texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)[:\.\-\s]+', '', pergunta.strip(), flags=re.IGNORECASE)
+    # Remove espaços extras e converte para minúsculas
+    texto_limpo = " ".join(texto_limpo.lower().split())
+    return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def carregar_banco_unico():
     pool_total = []
@@ -21,16 +24,16 @@ def carregar_banco_unico():
                 pool_total.extend(getattr(modulo, f"POOL_{i}"))
         except: continue
     
-    # Dicionário de controle: A chave é o "núcleo" da pergunta
+    # Dicionário de controle: A chave é o HASH do conteúdo
+    # Isso garante que perguntas iguais (mesmo com números diferentes) sejam ignoradas
     banco_final = {}
     for q in pool_total:
-        nucleo = extrair_nucleo_pergunta(q["pergunta"])
-        if nucleo not in banco_final:
+        h = gerar_hash_conteudo(q["pergunta"])
+        if h not in banco_final:
             q_copia = q.copy()
-            # Pré-embaralha as opções uma única vez
             q_copia['opcoes_fixas'] = q['opcoes'].copy()
             random.shuffle(q_copia['opcoes_fixas'])
-            banco_final[nucleo] = q_copia
+            banco_final[h] = q_copia
             
     return list(banco_final.values())
 
@@ -42,6 +45,7 @@ def main():
 
     if 'banco_questoes' not in st.session_state:
         st.session_state.banco_questoes = carregar_banco_unico()
+        # O simulado é sorteado a partir do banco já filtrado de duplicatas
         st.session_state.simulado_ativo = random.sample(
             st.session_state.banco_questoes, 
             k=min(40, len(st.session_state.banco_questoes))
@@ -56,6 +60,7 @@ def main():
         "ℹ️ Créditos & Desenvolvimento"
     ])
 
+    # --- ABA: TREINO GERAL ---
     if modo == "📖 Área de Treino (Geral)":
         for q in st.session_state.banco_questoes:
             st.markdown(f"**{q['pergunta']}**")
@@ -64,6 +69,7 @@ def main():
             elif res: st.error("❌ Errado.")
             st.divider()
 
+    # --- ABA: TREINO POR TÓPICO ---
     elif modo == "🎯 Treino por Tópico (Focado)":
         topicos = sorted(list(set(q['topico'] for q in st.session_state.banco_questoes)))
         t = st.selectbox("Escolha o tópico:", topicos, key="sel_t")
@@ -74,6 +80,7 @@ def main():
             elif res: st.error("❌ Errado.")
             st.divider()
 
+    # --- ABA: SIMULADO ---
     elif modo == "⏱️ Simulado LPI (Prova Real 40 Q)":
         if st.button("Gerar novo simulado"):
             st.session_state.simulado_ativo = random.sample(
@@ -82,10 +89,10 @@ def main():
             )
             st.rerun()
         
+        # Exibição com numeração original da pergunta
         for i, q in enumerate(st.session_state.simulado_ativo):
-            st.markdown(f"**{q['pergunta']}**")
-            # A chave única combina o índice e o ID para evitar erro de estado
-            st.radio(f"sim_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            st.markdown(f"**{i+1}. {q['pergunta']}**")
+            st.radio(f"sim_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
 
     elif modo == "🎁 Materiais VIP & Simulados":
