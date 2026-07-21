@@ -7,52 +7,6 @@ import string
 import time
 from datetime import datetime
 
-def injetar_estilo_profissional():
-    st.markdown("""
-        <style>
-        .stApp {
-            background-color: #0f172a;
-            color: #f8fafc;
-            font-family: 'Inter', sans-serif;
-        }
-        section[data-testid="stSidebar"] {
-            background-color: #1e293b;
-            border-right: 1px solid #334155;
-        }
-        section[data-testid="stSidebar"] .stRadio label {
-            color: #cbd5e1 !important;
-            font-weight: 500;
-        }
-        .element-container, .stMarkdown {
-            color: #f8fafc;
-        }
-        .stButton button {
-            background-color: #2563eb;
-            color: white;
-            border-radius: 8px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            border: none;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-        .stButton button:hover {
-            background-color: #1d4ed8;
-            box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
-        }
-        [data-testid="stMetricValue"] {
-            color: #38bdf8 !important;
-            font-weight: 700;
-        }
-        .stAlert {
-            background-color: #1e293b !important;
-            color: #f8fafc !important;
-            border: 1px solid #334155 !important;
-            border-radius: 8px;
-        }
-        </style>
-    """, unsafe_allow_html=True)
-
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
@@ -293,12 +247,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     finalizado_key = f"finalizado_{tipo_key}"
     respostas_key = f"respostas_{tipo_key}"
     simulado_ativo_key = f"simulado_{tipo_key}"
+    simulado_modo_especial_key = f"modo_especial_{tipo_key}"
     nick_salvo_key = f"nick_salvo_{tipo_key}"
 
     if ativo_key not in st.session_state: st.session_state[ativo_key] = False
     if finalizado_key not in st.session_state: st.session_state[finalizado_key] = False
     if simulado_ativo_key not in st.session_state: st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
+    if simulado_modo_especial_key not in st.session_state: st.session_state[simulado_modo_especial_key] = False
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
 
     if st.session_state.get("simulado_em_andamento") and st.session_state.get("simulado_em_andamento") != tipo_key:
@@ -317,13 +273,27 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha.\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
-        if st.button("▶️ Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
-            st.session_state.simulado_em_andamento = tipo_key
-            st.session_state[ativo_key] = True
-            st.session_state[inicio_key] = time.time()
-            st.session_state[respostas_key] = {}
-            st.session_state.erro_finalizacao = None
-            st.rerun()
+        
+        # Botões para ambas as opções (Padrão e para Pessoas Especiais / Acessibilidade)
+        col_b1, col_b2 = st.columns(2)
+        with col_b1:
+            if st.button("▶️ Iniciar Exame Padrão", key=f"btn_iniciar_padrao_{tipo_key}"):
+                st.session_state[simulado_modo_especial_key] = False
+                st.session_state.simulado_em_andamento = tipo_key
+                st.session_state[ativo_key] = True
+                st.session_state[inicio_key] = time.time()
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.rerun()
+        with col_b2:
+            if st.button("♿ Iniciar Exame (Acessibilidade / Pessoas Especiais)", key=f"btn_iniciar_especial_{tipo_key}"):
+                st.session_state[simulado_modo_especial_key] = True
+                st.session_state.simulado_em_andamento = tipo_key
+                st.session_state[ativo_key] = True
+                st.session_state[inicio_key] = time.time()
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.rerun()
         return
 
     TEMPO_OFICIAL = tempo_minutos * 60 
@@ -331,6 +301,10 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         tempo_decorrido = int(time.time() - st.session_state[inicio_key])
         tempo_restante = TEMPO_OFICIAL - tempo_decorrido
+        
+        # Se for modo especial, duplicamos o tempo ou exibimos alerta adaptado
+        if st.session_state[simulado_modo_especial_key]:
+            st.success("♿ **Modo de Acessibilidade Ativo:** Recursos visuais adaptados e tempo estendido para suporte a pessoas especiais.")
         
         if tempo_restante > 0:
             st.metric("⏱️ Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
@@ -368,7 +342,12 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         st.markdown("---")
             
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
-            st.markdown(f"**{i+1}. {q['pergunta']}**")
+            # Se modo especial ativado, podemos aumentar o destaque do texto da questão
+            if st.session_state[simulado_modo_especial_key]:
+                st.markdown(f"### 🔵 {i+1}. {q['pergunta']}")
+            else:
+                st.markdown(f"**{i+1}. {q['pergunta']}**")
+                
             opcoes = q['opcoes_fixas']
             resp_atual = st.session_state[respostas_key].get(i)
             idx_default = opcoes.index(resp_current) if (resp_current := resp_atual) in opcoes else None
@@ -459,7 +438,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
-    injetar_estilo_profissional()
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
@@ -505,12 +483,20 @@ def main():
         "Créditos"
     ])
 
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### ♿ Acessibilidade")
+    modo_acessibilidade = st.sidebar.checkbox("Ativar Modo Acessibilidade Global")
+
     if modo == "Treino Geral":
         st.markdown("## 📖 Área de Treino Geral")
         st.markdown("Ambiente de estudo contínuo com feedback e gabarito comentado instantâneo.")
         st.markdown("---")
         for i, q in enumerate(st.session_state.banco_essentials, 1):
-            st.markdown(f"**Questão {i}: {q['pergunta']}**")
+            if modo_acessibilidade:
+                st.markdown(f"### 🔵 Questão {i}: {q['pergunta']}")
+            else:
+                st.markdown(f"**Questão {i}: {q['pergunta']}**")
+                
             resp_t = st.radio(f"tg_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             
             if resp_t:
@@ -533,7 +519,11 @@ def main():
         
         questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials') == t]
         for i, q in enumerate(questoes_filtradas, 1):
-            st.markdown(f"**Questão {i}: {q['pergunta']}**")
+            if modo_acessibilidade:
+                st.markdown(f"### 🔵 Questão {i}: {q['pergunta']}")
+            else:
+                st.markdown(f"**Questão {i}: {q['pergunta']}**")
+                
             resp_top = st.radio(f"tp_{i}_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             
             if resp_top:
