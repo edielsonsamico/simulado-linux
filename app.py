@@ -28,14 +28,13 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura universal por qualquer chave de resposta nos arquivos de tópicos
+            # Varredura universal por qualquer chave de resposta correta nos arquivos de tópicos
             resp_encontrada = None
             for chave, valor in q.items():
                 chave_lower = chave.lower()
                 if any(termo in chave_lower for termo in ['corret', 'resp', 'gabarit', 'answer', 'right', 'solucao']):
                     if valor is not None and str(valor).strip() != "":
                         val_str = str(valor).strip()
-                        # Se for um índice numérico correspondente às opções
                         if val_str.isdigit() and 'opcoes' in q:
                             idx = int(val_str)
                             if 0 <= idx < len(q['opcoes']):
@@ -65,6 +64,8 @@ def main():
         st.session_state.inicio_simulado = time.time()
     if 'simulado_finalizado' not in st.session_state:
         st.session_state.simulado_finalizado = False
+    if 'respostas_usuario' not in st.session_state:
+        st.session_state.respostas_usuario = {}
 
     st.sidebar.title("Ambiente SAMICOIOT")
     modo = st.sidebar.radio("Navegação:", [
@@ -109,11 +110,21 @@ def main():
             if st.button("Gerar novo simulado"):
                 st.session_state.inicio_simulado = time.time()
                 st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_usuario = {}
                 st.rerun()
                 
             for i, q in enumerate(st.session_state.simulado_ativo):
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
-                st.radio(f"sim_{q['id']}", q['opcoes_fixas'], key=f"ans_{i}", index=None, label_visibility="collapsed")
+                
+                # Identifica se já havia uma resposta salva para esta questão
+                opcoes = q['opcoes_fixas']
+                resp_atual = st.session_state.respostas_usuario.get(i)
+                idx_default = opcoes.index(resp_current) if (resp_current := resp_atual) in opcoes else None
+                
+                escolha = st.radio(f"sim_{i}_{q['id']}", opcoes, index=idx_default, label_visibility="collapsed")
+                if escolha:
+                    st.session_state.respostas_usuario[i] = escolha
+                    
                 st.divider()
             
             if st.button("Finalizar Simulado e Ver Gabarito"):
@@ -126,8 +137,9 @@ def main():
             total_questoes = len(st.session_state.simulado_ativo)
             
             for i, q in enumerate(st.session_state.simulado_ativo):
-                resposta_usuario = st.session_state.get(f"ans_{i}")
+                resposta_usuario = st.session_state.respostas_usuario.get(i)
                 resposta_correta = q.get('resposta_oficial')
+                
                 if resposta_usuario and resposta_correta and (str(resposta_usuario).strip().lower() == str(resposta_correta).strip().lower()):
                     acertos += 1
             
@@ -139,7 +151,7 @@ def main():
             st.subheader("📋 Gabarito Detalhado")
             
             for i, q in enumerate(st.session_state.simulado_ativo):
-                resp_user = st.session_state.get(f"ans_{i}")
+                resp_user = st.session_state.respostas_usuario.get(i)
                 resp_certa = q.get('resposta_oficial')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
@@ -158,6 +170,7 @@ def main():
                 st.session_state.simulado_finalizado = False
                 st.session_state.inicio_simulado = time.time()
                 st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_usuario = {}
                 st.rerun()
             
     elif modo == "Materiais VIP":
