@@ -168,17 +168,18 @@ def main():
                 st.session_state.simulado_finalizado = True
                 st.rerun()
             
-            # BOTÕES TOPO
-            col_b1, col_b2 = st.columns([1, 4])
-            with col_b1:
-                if st.button("Gerar novo simulado", key="btn_novo_topo"):
-                    st.session_state.inicio_simulado = time.time()
-                    st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                    st.session_state.respostas_usuario = {}
-                    st.rerun()
-            with col_b2:
-                if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo"):
-                    processar_finalizacao(tempo_decorrido)
+            # BOTÃO DE GERAR NOVO SIMULADO (Apenas antes de iniciar a prova ou se quiser reiniciar)
+            if st.button("🔄 Sortear Novas Questões (Reiniciar Prova)", key="btn_novo_topo"):
+                st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_usuario = {}
+                st.rerun()
+
+            st.markdown("---")
+            
+            # BOTÃO DE FINALIZAR TOPO
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo"):
+                processar_finalizacao(tempo_decorrido)
 
             st.markdown("---")
                 
@@ -195,17 +196,9 @@ def main():
                     
                 st.divider()
 
-            # BOTÕES BASE
-            col_bb1, col_bb2 = st.columns([1, 4])
-            with col_bb1:
-                if st.button("Gerar novo simulado", key="btn_novo_base"):
-                    st.session_state.inicio_simulado = time.time()
-                    st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                    st.session_state.respostas_usuario = {}
-                    st.rerun()
-            with col_bb2:
-                if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base"):
-                    processar_finalizacao(tempo_decorrido)
+            # BOTÃO DE FINALIZAR BASE
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base"):
+                processar_finalizacao(tempo_decorrido)
                 
         else:
             st.success("🏁 Simulado Finalizado com Sucesso! Desempenho aprovado para liberação do gabarito.")
@@ -247,7 +240,7 @@ def main():
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
 
-            if st.button("Reiniciar / Novo Simulado", key="btn_reiniciar_fim"):
+            if st.button("🔄 Iniciar Novo Simulado", key="btn_reiniciar_fim"):
                 st.session_state.simulado_finalizado = False
                 st.session_state.inicio_simulado = time.time()
                 st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
@@ -301,12 +294,11 @@ def processar_finalizacao(tempo_decorrido):
     total_questoes = len(st.session_state.simulado_ativo)
     questoes_respondidas = len(st.session_state.respostas_usuario)
     
-    # 1. Validação obrigatória: A prova DEVE ser feita inteira (40/40)
+    # Validação: Prova deve ser feita inteira
     if questoes_respondidas < total_questoes:
-        st.error(f"❌ Você respondeu apenas {questoes_respondidas} de {total_questoes} questões. Para finalizar o simulado, é obrigatório responder TODAS as questões da prova!")
+        st.error(f"❌ Você respondeu apenas {questoes_respondidas} de {total_questoes} questões. É obrigatório responder TODAS as questões antes de finalizar!")
         return
 
-    # 2. Conta os acertos
     acertos = 0
     for i, q in enumerate(st.session_state.simulado_ativo):
         resp_user = st.session_state.respostas_usuario.get(i)
@@ -314,16 +306,14 @@ def processar_finalizacao(tempo_decorrido):
         if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
             acertos += 1
             
-    minimo_acertos = total_questoes * 0.5  # Regra de 50% de acertos (20 de 40)
+    minimo_acertos = total_questoes * 0.5  # 50% de acertos
     
-    # 3. Validação de desempenho mínimo (50%)
     if acertos < minimo_acertos:
-        st.error(f"❌ Você completou a prova inteira, mas acertou {acertos} de {total_questoes} questões ({ (acertos/total_questoes)*100:.1f}%). Para liberar o gabarito e entrar no Ranking Top 10, é necessário atingir no mínimo 50% de acertos ({int(minimo_acertos)} acertos). Continue treinando!")
+        st.error(f"❌ Você concluiu a prova, mas acertou {acertos} de {total_questoes} questões ({ (acertos/total_questoes)*100:.1f}%). Para liberar o gabarito e entrar no Ranking Top 10, é necessário atingir no mínimo 50% de acertos ({int(minimo_acertos)} acertos). Continue treinando!")
     else:
         st.session_state.tempo_gasto = tempo_decorrido
         st.session_state.simulado_finalizado = True
         
-        # Captura o nickname para o ranking
         nick_input = st.text_input("🎉 Parabéns! Meta de 50% atingida. Digite seu Nickname para o Ranking:", value="Samico")
         if st.button("Confirmar e Salvar no Ranking"):
             nota_final_val = (acertos / total_questoes) * 10
