@@ -7,6 +7,28 @@ import string
 import time
 from datetime import datetime
 
+def aplicar_estilo_acessivel(modo_escuro):
+    if modo_escuro:
+        st.markdown("""
+            <style>
+            .stApp { background-color: #0b0f19; color: #ffffff; font-size: 18px; }
+            section[data-testid="stSidebar"] { background-color: #111827; color: #ffffff; }
+            .stRadio label, .stCheckbox label { color: #ffffff !important; font-size: 18px !important; font-weight: 600; }
+            .stMarkdown, p, span { color: #f3f4f6 !important; font-size: 18px !important; }
+            h1, h2, h3 { color: #60a5fa !important; }
+            </style>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <style>
+            .stApp { background-color: #ffffff; color: #111827; font-size: 18px; }
+            section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
+            .stRadio label, .stCheckbox label { color: #111827 !important; font-size: 18px !important; font-weight: 600; }
+            .stMarkdown, p, span { color: #1f2937 !important; font-size: 18px !important; }
+            h1, h2, h3 { color: #1d4ed8 !important; }
+            </style>
+        """, unsafe_allow_html=True)
+
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
@@ -210,8 +232,11 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     for i, q in enumerate(banco_ativo):
         resp_user = respostas_ativas.get(i)
         resp_certa = q.get('resposta_oficial')
-        if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
-            acertos += 1
+        if resp_user and resp_certa:
+            u_limpo = " ".join(str(resp_user).strip().lower().split())
+            c_limpo = " ".join(str(resp_certa).strip().lower().split())
+            if u_limpo == c_limpo:
+                acertos += 1
             
     minimo_acertos = total_questoes * 0.5
     
@@ -240,7 +265,7 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
-    st.markdown(f"## ⏱️ {titulo_pagina}")
+    st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
     inicio_key = f"inicio_{tipo_key}"
@@ -274,10 +299,9 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha.\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
         
-        # Botões para ambas as opções (Padrão e para Pessoas Especiais / Acessibilidade)
         col_b1, col_b2 = st.columns(2)
         with col_b1:
-            if st.button("▶️ Iniciar Exame Padrão", key=f"btn_iniciar_padrao_{tipo_key}"):
+            if st.button("Iniciar Exame Padrão", key=f"btn_iniciar_padrao_{tipo_key}"):
                 st.session_state[simulado_modo_especial_key] = False
                 st.session_state.simulado_em_andamento = tipo_key
                 st.session_state[ativo_key] = True
@@ -286,7 +310,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                 st.session_state.erro_finalizacao = None
                 st.rerun()
         with col_b2:
-            if st.button("♿ Iniciar Exame (Acessibilidade / Pessoas Especiais)", key=f"btn_iniciar_especial_{tipo_key}"):
+            if st.button("Iniciar Exame (Acessibilidade / Pessoas Especiais)", key=f"btn_iniciar_especial_{tipo_key}"):
                 st.session_state[simulado_modo_especial_key] = True
                 st.session_state.simulado_em_andamento = tipo_key
                 st.session_state[ativo_key] = True
@@ -302,12 +326,11 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         tempo_decorrido = int(time.time() - st.session_state[inicio_key])
         tempo_restante = TEMPO_OFICIAL - tempo_decorrido
         
-        # Se for modo especial, duplicamos o tempo ou exibimos alerta adaptado
         if st.session_state[simulado_modo_especial_key]:
-            st.success("♿ **Modo de Acessibilidade Ativo:** Recursos visuais adaptados e tempo estendido para suporte a pessoas especiais.")
+            st.success("♿ **Modo de Acessibilidade Ativo:** Recursos visuais adaptados e fonte ampliada para suporte a pessoas especiais.")
         
         if tempo_restante > 0:
-            st.metric("⏱️ Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
+            st.metric("Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
         else:
             st.error("TEMPO ESGOTADO!")
             st.session_state.tempo_gasto = TEMPO_OFICIAL
@@ -323,12 +346,12 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             if "50%" in st.session_state.erro_finalizacao:
                 c1, c2 = st.columns(2)
                 with c1:
-                    if st.button("🧹 Limpar Respostas", key=f"btn_limpar_topo_{tipo_key}"):
+                    if st.button("Limpar Respostas", key=f"btn_limpar_topo_{tipo_key}"):
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.rerun()
                 with c2:
-                    if st.button("🔄 Sortear Novas Questões", key=f"btn_sortear_topo_{tipo_key}"):
+                    if st.button("Sortear Novas Questões", key=f"btn_sortear_topo_{tipo_key}"):
                         st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
@@ -342,9 +365,8 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         st.markdown("---")
             
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
-            # Se modo especial ativado, podemos aumentar o destaque do texto da questão
             if st.session_state[simulado_modo_especial_key]:
-                st.markdown(f"### 🔵 {i+1}. {q['pergunta']}")
+                st.markdown(f"### {i+1}. {q['pergunta']}")
             else:
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
@@ -362,12 +384,12 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             if "50%" in st.session_state.erro_finalizacao:
                 cb1, cb2 = st.columns(2)
                 with cb1:
-                    if st.button("🧹 Limpar Respostas", key=f"btn_limpar_base_{tipo_key}"):
+                    if st.button("Limpar Respostas", key=f"btn_limpar_base_{tipo_key}"):
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.rerun()
                 with cb2:
-                    if st.button("🔄 Sortear Novas Questões", key=f"btn_sortear_base_{tipo_key}"):
+                    if st.button("Sortear Novas Questões", key=f"btn_sortear_base_{tipo_key}"):
                         st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
@@ -379,15 +401,25 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             processar_finalizacao(tipo_key, tempo_decorrido)
             
     elif st.session_state[finalizado_key]:
-        st.success(f"🏁 {titulo_pagina} Concluído com Sucesso!")
-        acertos = sum(1 for i, q in enumerate(st.session_state[simulado_ativo_key]) if st.session_state[respostas_key].get(i) and str(st.session_state[respostas_key].get(i)).strip().lower() == str(q.get('resposta_oficial')).strip().lower())
+        st.success(f"{titulo_pagina} Concluído com Sucesso!")
+        
+        acertos = 0
+        for i, q in enumerate(st.session_state[simulado_ativo_key]):
+            resp_user = st.session_state[respostas_key].get(i)
+            resp_certa = q.get('resposta_oficial')
+            if resp_user and resp_certa:
+                u_limpo = " ".join(str(resp_user).strip().lower().split())
+                c_limpo = " ".join(str(resp_certa).strip().lower().split())
+                if u_limpo == c_limpo:
+                    acertos += 1
+                    
         total_questoes = len(st.session_state[simulado_ativo_key])
         nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
         
         tag_ranking = {"essentials": "Essentials", "lpic1": "LPIC-1", "lpic2": "LPIC-2", "misto12": "Misto 1+2", "geral": "Geral"}[tipo_key]
 
         if not st.session_state[nick_salvo_key]:
-            st.info("🎉 Desempenho aprovado! Registre sua credencial no Ranking Global:")
+            st.info("Desempenho aprovado! Registre sua credencial no Ranking Global:")
             col_n1, col_n2 = st.columns([3, 1])
             with col_n1:
                 nick_input = st.text_input("Nome / Nickname:", value="Samico", key=f"nick_{tipo_key}")
@@ -406,12 +438,12 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                     st.session_state[nick_salvo_key] = True
                     st.rerun()
         else:
-            st.success("✅ Credencial registrada com sucesso no Ranking!")
+            st.success("Credencial registrada com sucesso no Ranking!")
         
         st.markdown("---")
         st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
         
-        if st.button("🔄 Sortear Novo Exame", key=f"btn_novo_fim_{tipo_key}"):
+        if st.button("Sortear Novo Exame", key=f"btn_novo_fim_{tipo_key}"):
             st.session_state[finalizado_key] = False
             st.session_state[ativo_key] = False
             st.session_state.simulado_em_andamento = None
@@ -420,7 +452,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             st.session_state.erro_finalizacao = None
             st.rerun()
 
-        st.markdown("### 📋 Gabarito Analítico com Comentários Técnicos")
+        st.markdown("### Gabarito Analítico com Comentários Técnicos")
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
             resp_user = st.session_state[respostas_key].get(i)
             resp_certa = q.get('resposta_oficial', 'Não informada')
@@ -438,6 +470,15 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
+
+    # Controles de Acessibilidade Visual na Barra Lateral
+    st.sidebar.markdown("## LinuxPro Academy")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 👁️ Ajustes Visuais")
+    modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)")
+    modo_acessibilidade = st.sidebar.checkbox("♿ Ativar Modo Acessibilidade (Fonte Ampliada)")
+
+    aplicar_estilo_acessivel(modo_escuro)
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
@@ -468,7 +509,6 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
-    st.sidebar.markdown("## 🐧 LinuxPro Academy")
     st.sidebar.markdown("---")
     modo = st.sidebar.radio("Painel de Navegação:", [
         "Treino Geral", 
@@ -483,17 +523,13 @@ def main():
         "Créditos"
     ])
 
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### ♿ Acessibilidade")
-    modo_acessibilidade = st.sidebar.checkbox("Ativar Modo Acessibilidade Global")
-
     if modo == "Treino Geral":
-        st.markdown("## 📖 Área de Treino Geral")
+        st.markdown("## Área de Treino Geral")
         st.markdown("Ambiente de estudo contínuo com feedback e gabarito comentado instantâneo.")
         st.markdown("---")
         for i, q in enumerate(st.session_state.banco_essentials, 1):
             if modo_acessibilidade:
-                st.markdown(f"### 🔵 Questão {i}: {q['pergunta']}")
+                st.markdown(f"### Questão {i}: {q['pergunta']}")
             else:
                 st.markdown(f"**Questão {i}: {q['pergunta']}**")
                 
@@ -510,7 +546,7 @@ def main():
             st.divider()
 
     elif modo == "Treino por Tópico":
-        st.markdown("## 🎯 Treino Focado por Tópico")
+        st.markdown("## Treino Focado por Tópico")
         topicos = sorted(list(set(q.get('topico', 'Geral Essentials') for q in st.session_state.banco_essentials if 'topico' in q)))
         if not topicos:
             topicos = ["Geral Essentials"]
@@ -520,7 +556,7 @@ def main():
         questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials') == t]
         for i, q in enumerate(questoes_filtradas, 1):
             if modo_acessibilidade:
-                st.markdown(f"### 🔵 Questão {i}: {q['pergunta']}")
+                st.markdown(f"### Questão {i}: {q['pergunta']}")
             else:
                 st.markdown(f"**Questão {i}: {q['pergunta']}**")
                 
@@ -552,7 +588,7 @@ def main():
         renderizar_modulo_simulado("Simulado Geral Misto (Essentials + LPIC-1 + LPIC-2)", "geral", st.session_state.banco_geral, qtd_questoes=60, tempo_minutos=90)
 
     elif modo == "Ranking de Notas":
-        st.markdown("## 🏆 Hall da Fama - Rankings Globais")
+        st.markdown("## Hall da Fama - Rankings Globais")
         st.markdown("Painel executivo de certificações e melhores desempenhos com registro de data e horário.")
         st.markdown("---")
         
@@ -565,7 +601,7 @@ def main():
         ]
         
         for nome_cat, tag_cat in categorias:
-            st.markdown(f"### 📌 Categoria: {nome_cat}")
+            st.markdown(f"### Categoria: {nome_cat}")
             ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova') == tag_cat]
             ranking_ordenado = sorted(ranking_filtrado, key=lambda x: (-x['nota'], x['tempo']))[:10]
             
@@ -579,19 +615,19 @@ def main():
                     dh_str = item.get('data_hora', '21/07/2026 às 09:00')
                     
                     if idx == 1:
-                        st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
+                        st.markdown(f"**1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | `{dh_str}`")
                     elif idx == 2:
-                        st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
+                        st.markdown(f"**2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | `{dh_str}`")
                     elif idx == 3:
-                        st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
+                        st.markdown(f"**3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | `{dh_str}`")
                     else:
-                        st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
+                        st.markdown(f"**{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | `{dh_str}`")
             st.markdown("---")
             
     elif modo == "Materiais VIP":
-        st.markdown("## 🎁 Central de Recursos VIP")
+        st.markdown("## Central de Recursos VIP")
         if not st.session_state.acesso_vip:
-            if st.link_button("👉 INSCREVA-SE NO CANAL OFICIAL", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
+            if st.link_button("INSCREVA-SE NO CANAL OFICIAL", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
                 st.session_state.clicou_no_cadastro = True
             if st.session_state.clicou_no_cadastro:
                 if st.button("Gerar Chave de Acesso"): st.info(f"Chave VIP: **{st.session_state.senha_aleatoria}**")
@@ -609,7 +645,7 @@ def main():
                 st.rerun()
     
     elif modo == "Créditos":
-        st.markdown("## ℹ️ Sobre a Plataforma")
+        st.markdown("## Sobre a Plataforma")
         st.markdown("**LinuxPro Academy** — Desenvolvido por Edielson Samico.")
 
 if __name__ == "__main__":
