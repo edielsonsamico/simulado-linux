@@ -29,36 +29,23 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura exaustiva por qualquer chave de resposta correta existente no dicionário
+            # Varredura total por qualquer chave que contenite dados de resposta
             resp_oficial = None
-            chaves_possiveis = ['resposta', 'correta', 'resp', 'gabarito', 'answer', 'right', 'opcao_correta', 'alternativa_correta']
-            
-            for chave in chaves_possiveis:
-                if chave in q and q[chave] is not None and str(q[chave]).strip() != "":
-                    val = str(q[chave]).strip()
-                    
-                    # Se estiver salvo como índice numérico (ex: 0, 1, 2)
-                    if val.isdigit() and 'opcoes' in q:
-                        idx = int(val)
-                        if 0 <= idx < len(q['opcoes']):
-                            resp_oficial = str(q['opcoes'][idx]).strip()
+            for chave, valor in q.items():
+                chave_lower = chave.lower()
+                if any(termo in chave_lower for termo in ['resp', 'corret', 'gabarit', 'answer', 'right', 'solucao']):
+                    if valor is not None and str(valor).strip() != "":
+                        val_str = str(valor).strip()
+                        # Se for um índice numérico
+                        if val_str.isdigit() and 'opcoes' in q:
+                            idx = int(val_str)
+                            if 0 <= idx < len(q['opcoes']):
+                                resp_oficial = str(q['opcoes'][idx]).strip()
+                                break
+                        else:
+                            resp_oficial = val_str
                             break
-                    
-                    # Se estiver salvo como letra (ex: 'a', 'b', 'c', 'd')
-                    elif val.lower() in ['a', 'b', 'c', 'd', 'e'] and 'opcoes' in q:
-                        mapa_letras = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4}
-                        idx = mapa_letras.get(val.lower())
-                        if idx is not None and idx < len(q['opcoes']):
-                            resp_oficial = str(q['opcoes'][idx]).strip()
-                            break
-                    else:
-                        resp_oficial = val
-                        break
             
-            # Fallback de segurança caso a chave venha vazia: assume o primeiro elemento das opções originais se houver
-            if not resp_oficial and 'opcoes' in q and len(q['opcoes']) > 0:
-                resp_oficial = str(q['opcoes'][0]).strip()
-
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
             
@@ -155,13 +142,14 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.get(f"ans_{i}")
-                resp_certa = q.get('resposta_oficial', 'Não informada')
+                resp_certa = q.get('resposta_oficial')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
-                if not resp_user:
-                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
-                elif str(resp_user).strip().lower() == str(resp_certa).strip().lower():
+                if not resp_certa:
+                    # Exibe todas as chaves reais da questão para tirarmos a prova de vez
+                    st.warning(f"Sua resposta: {resp_user} | DEBUG - Chaves reais no arquivo: {list(q.keys())}")
+                elif resp_user and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
