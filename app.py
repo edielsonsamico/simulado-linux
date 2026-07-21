@@ -15,6 +15,8 @@ def inferir_resposta_correta(pergunta, opcoes):
     """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
     p = pergunta.lower()
     termos_chave = {
+        "representação octal tradicional de permissões": "leitura é 4",
+        "lsof utilizando especificamente a flag -i": "processos atrelados a conexões de rede e portas abertas",
         "protocolo de sincronização temporal ntp": "porta udp 123",
         "hotplug": "permitir conexão e desconexão de dispositivos com a máquina ligada",
         "desligar ou reiniciar a máquina de forma segura, permitindo alertar": "shutdown",
@@ -168,13 +170,6 @@ def main():
                 st.session_state.simulado_finalizado = True
                 st.rerun()
             
-            # BOTÃO DE GERAR NOVO SIMULADO (Apenas antes de iniciar a prova ou se quiser reiniciar)
-            if st.button("🔄 Sortear Novas Questões (Reiniciar Prova)", key="btn_novo_topo"):
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
-                st.rerun()
-
             st.markdown("---")
             
             # BOTÃO DE FINALIZAR TOPO
@@ -224,6 +219,15 @@ def main():
                 st.metric("Tempo de Prova", f"{minutos_usados:02d}:{segundos_usados:02d}")
             
             st.markdown("---")
+            
+            # BOTÃO DE NOVO SIMULADO (Aparece apenas após finalizar a prova)
+            if st.button("🔄 Sortear Novas Questões (Iniciar Novo Simulado)", key="btn_novo_fim"):
+                st.session_state.simulado_finalizado = False
+                st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_usuario = {}
+                st.rerun()
+
             st.subheader("📋 Gabarito Detalhado")
             
             for i, q in enumerate(st.session_state.simulado_ativo):
@@ -239,13 +243,6 @@ def main():
                 else:
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
-
-            if st.button("🔄 Iniciar Novo Simulado", key="btn_reiniciar_fim"):
-                st.session_state.simulado_finalizado = False
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
-                st.rerun()
 
     elif modo == "Ranking de Notas":
         st.title("🏆 Ranking Top 10 (Maiores Notas & Agilidade)")
