@@ -33,7 +33,6 @@ def carregar_banco_unico():
             resp_oficial = None
             if 'correta' in q and q['correta'] is not None:
                 val = q['correta']
-                # Se for um número inteiro ou string numérica indicando o índice (ex: 0, 1, 2, 3)
                 if str(val).isdigit() and 'opcoes' in q:
                     idx = int(val)
                     if 0 <= idx < len(q['opcoes']):
@@ -83,7 +82,7 @@ def main():
         st.title("🎯 Treino por Tópico")
         topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_questoes)))
         t = st.selectbox("Escolha:", topicos)
-        for q in [q for q in st.session_state.banco_questoes if q.get('topico'] == t]:
+        for q in [q for q in st.session_state.banco_questoes if q.get('topico') == t]:
             st.markdown(f"**{q['pergunta']}**")
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
