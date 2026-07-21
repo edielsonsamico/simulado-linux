@@ -141,7 +141,7 @@ def inferir_resposta_correta(pergunta, opcoes):
 def obter_comentario(pergunta, resposta_certa):
     p = pergunta.lower()
     if "swap" in p:
-        return "💡 **Comentário Técnico:** A partição/espaço de swap é utilizada pelo kernel como memória virtual quando a RAM física atinge el limite."
+        return "💡 **Comentário Técnico:** A partição/espaço de swap é utilizada pelo kernel como memória virtual quando a RAM física atinge o limite."
     elif "fhs" in p or "usr" in p:
         return "💡 **Comentário Técnico:** Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
     elif "lilo" in p or "syslinux" in p:
@@ -522,7 +522,6 @@ def main():
         st.session_state.banco_geral = st.session_state.banco_essentials + st.session_state.banco_lpic1 + st.session_state.banco_lpic2
 
     if 'acesso_vip' not in st.session_state: st.session_state.acesso_vip = False
-    if 'clicou_no_cadastro' not in st.session_state: st.session_state.clicou_no_cadastro = False
     if 'senha_aleatoria' not in st.session_state:
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
         
@@ -659,41 +658,30 @@ def main():
                 </a>
             """, unsafe_allow_html=True)
             
-            st.write("")
-            if st.button("Já me inscrevi no canal! Avançar"):
-                st.session_state.clicou_no_cadastro = True
-                st.rerun()
-                
-            if st.session_state.clicou_no_cadastro:
-                st.markdown("---")
-                # Botão de voltar para dar liberdade ao usuário
-                if st.button("↩️ Voltar / Refazer Passo 1"):
-                    st.session_state.clicou_no_cadastro = False
+            st.markdown("---")
+            st.markdown("### Passo 2: Contribuição Voluntária via Pix")
+            st.markdown("Faça uma doação/contribuição para a chave Pix abaixo:")
+            st.code("samicoiot@gmail.com", language="text")
+            
+            st.markdown("Ou escaneie o QR Code abaixo com o aplicativo do seu banco:")
+            qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=samicoiot@gmail.com"
+            st.image(qr_url, width=200)
+            
+            st.markdown("---")
+            st.markdown("### Passo 3: Validar Acesso")
+            comprovante_input = st.text_input("Insira o código de liberação ou ID da transação:", type="password")
+            
+            if st.button("Validar Acesso VIP"):
+                if comprovante_input == st.session_state.senha_aleatoria or comprovante_input == "vip2026":
+                    st.session_state.acesso_vip = True
+                    st.success("✅ Acesso liberado com sucesso! Obrigado pelo apoio.")
+                    time.sleep(1)
                     st.rerun()
-
-                st.markdown("### Passo 2: Contribuição Voluntária via Pix")
-                st.markdown("Faça uma doação/contribuição para a chave Pix abaixo:")
-                st.code("samicoiot@gmail.com", language="text")
-                
-                st.markdown("Ou escaneie o QR Code abaixo com o aplicativo do seu banco:")
-                qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=samicoiot@gmail.com"
-                st.image(qr_url, width=200)
-                
-                st.markdown("---")
-                st.markdown("### Passo 3: Validar Acesso")
-                comprovante_input = st.text_input("Insira o código de liberação ou ID da transação:", type="password")
-                
-                if st.button("Validar Acesso VIP"):
-                    if comprovante_input == st.session_state.senha_aleatoria or comprovante_input == "vip2026":
-                        st.session_state.acesso_vip = True
-                        st.success("✅ Acesso liberado com sucesso! Obrigado pelo apoio.")
-                        time.sleep(1)
-                        st.rerun()
-                    else:
-                        st.error("❌ Código inválido. Verifique o código ou gere uma chave de teste.")
-                
-                if st.button("Gerar Chave de Teste (Admin)"):
-                    st.info(f"Chave gerada para teste: **{st.session_state.senha_aleatoria}**")
+                else:
+                    st.error("❌ Código inválido. Verifique o código ou gere uma chave de teste.")
+            
+            if st.button("Gerar Chave de Teste (Admin)"):
+                st.info(f"Chave gerada para teste: **{st.session_state.senha_aleatoria}**")
         else:
             st.success("🎉 **Bem-vindo à Área VIP Corporativa!** Acesso total liberado.")
             materiais = {
