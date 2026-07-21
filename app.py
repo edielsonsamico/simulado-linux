@@ -225,7 +225,6 @@ def main():
     if 'simulado_lpic2' not in st.session_state:
         st.session_state.simulado_lpic2 = random.sample(st.session_state.banco_lpic2, k=40)
 
-    # Simulado Geral (Misto de Essentials, LPIC-1 e LPIC-2)
     if 'banco_geral' not in st.session_state:
         st.session_state.banco_geral = st.session_state.banco_essentials + st.session_state.banco_lpic1 + st.session_state.banco_lpic2
     if 'simulado_geral' not in st.session_state:
@@ -778,25 +777,39 @@ def main():
                 st.divider()
 
     elif modo == "Ranking de Notas":
-        st.title("🏆 Ranking Top 10 (Maiores Notas & Agilidade)")
-        st.markdown("Os 10 melhores operadores do ambiente. *Critério de desempate: menor tempo de conclusão.*")
+        st.title("🏆 Rankings Top 10 por Categoria")
+        st.markdown("Confira os melhores desempenhos divididos por cada tipo de simulado. *Critério de desempate: menor tempo de conclusão.*")
         
-        ranking_ordenado = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))[:10]
+        categorias = [
+            ("Linux Essentials", "Essentials"),
+            ("LPIC-1", "LPIC-1"),
+            ("LPIC-2", "LPIC-2"),
+            ("Simulado Geral Misto", "Geral")
+        ]
         
-        for idx, item in enumerate(ranking_ordenado, 1):
-            m_t = item['tempo'] // 60
-            s_t = item['tempo'] % 60
-            tempo_str = f"{m_t:02d}:{s_t:02d}"
-            prova_tag = item.get('prova', 'Essentials')
+        for nome_cat, tag_cat in categorias:
+            st.subheader(f"📌 Ranking: {nome_cat}")
+            # Filtra o ranking apenas para a categoria correspondente
+            ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova') == tag_cat]
+            ranking_ordenado = sorted(ranking_filtrado, key=lambda x: (-x['nota'], x['tempo']))[:10]
             
-            if idx == 1:
-                st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
-            elif idx == 2:
-                st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
-            elif idx == 3:
-                st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
+            if not ranking_ordenado:
+                st.info(f"Nenhum registro no ranking de {nome_cat} ainda. Seja o primeiro a concluir!")
             else:
-                st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
+                for idx, item in enumerate(ranking_ordenado, 1):
+                    m_t = item['tempo'] // 60
+                    s_t = item['tempo'] % 60
+                    tempo_str = f"{m_t:02d}:{s_t:02d}"
+                    
+                    if idx == 1:
+                        st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                    elif idx == 2:
+                        st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                    elif idx == 3:
+                        st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                    else:
+                        st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+            st.markdown("---")
             
     elif modo == "Materiais VIP":
         st.title("🎁 Materiais VIP")
