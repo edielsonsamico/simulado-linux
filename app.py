@@ -535,21 +535,19 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
-    # Inicializa o estado da página ativa
-    if 'menu_atual' not in st.session_state:
-        st.session_state.menu_atual = "Treino Geral"
+    # Inicializa o estado do menu
+    if 'menu_ativo' not in st.session_state:
+        st.session_state.menu_ativo = "Treino Geral"
 
-    # Controles de Acessibilidade Visual na Barra Lateral
+    # Configurações na Barra Lateral (Apenas Zoom e Modo Escuro)
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
-    
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
-    nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], key="zoom_sidebar", label_visibility="collapsed")
-    modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)", key="dark_sidebar")
+    nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], key="zoom_sb", label_visibility="collapsed")
+    modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)", key="dark_sb")
 
     aplicar_estilo_acessivel(nivel_zoom, modo_escuro)
 
-    st.sidebar.markdown("---")
     opcoes_menu = [
         "Treino Geral", 
         "Treino por Tópico", 
@@ -563,36 +561,28 @@ def main():
         "Créditos"
     ]
 
-    st.sidebar.markdown("### 🧭 Painel de Navegação")
-    # Menu lateral sincronizado com o session_state
-    modo_side = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0, key="radio_sidebar_nav")
-    
-    if modo_side != st.session_state.menu_atual:
-        st.session_state.menu_atual = modo_side
-        st.rerun()
-
-    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COM BOTÕES FUNCIONAIS E ÚNICOS
+    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR INTERATIVO (Com callbacks diretos para evitar conflitos)
     st.markdown("### 🧭 Menu Principal Rápido")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        if st.button("📚 Treino Geral", key="btn_top_treino_geral", use_container_width=True):
-            st.session_state.menu_atual = "Treino Geral"
+        if st.button("📚 Treino Geral", use_container_width=True, key="b_treino"):
+            st.session_state.menu_ativo = "Treino Geral"
             st.rerun()
     with c2:
-        if st.button("🏆 Ranking", key="btn_top_ranking", use_container_width=True):
-            st.session_state.menu_atual = "Ranking de Notas"
+        if st.button("🏆 Ranking", use_container_width=True, key="b_ranking"):
+            st.session_state.menu_ativo = "Ranking de Notas"
             st.rerun()
     with c3:
-        if st.button("🔓 Materiais VIP", key="btn_top_materiais_vip", use_container_width=True):
-            st.session_state.menu_atual = "Materiais VIP"
+        if st.button("🔓 Materiais VIP", use_container_width=True, key="b_vip"):
+            st.session_state.menu_ativo = "Materiais VIP"
             st.rerun()
     with c4:
-        if st.button("ℹ️ Créditos", key="btn_top_creditos", use_container_width=True):
-            st.session_state.menu_atual = "Créditos"
+        if st.button("ℹ️ Créditos", use_container_width=True, key="b_cred"):
+            st.session_state.menu_ativo = "Créditos"
             st.rerun()
     st.markdown("---")
 
-    modo = st.session_state.menu_atual
+    modo = st.session_state.menu_ativo
 
     if modo == "Treino Geral":
         st.markdown("## Área de Treino Geral")
