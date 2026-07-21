@@ -411,9 +411,20 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             resp_atual = st.session_state[respostas_key].get(i)
             idx_default = opcoes.index(resp_atual) if resp_atual in opcoes else None
             
-            escolha = st.radio(f"radio_{tipo_key}_{i}_{q['id']}", opcoes, index=idx_default, key=f"val_{tipo_key}_{i}", label_visibility="collapsed")
-            if escolha is not None:
-                st.session_state[respostas_key][i] = escolha
+            # 🌟 ALTERNATIVAS NUMERADAS/FORMATADAS COM LETRAS (A, B, C, D)
+            opcoes_formatadas = [f"{chr(65+j)}) {op}" for j, op in enumerate(opcoes)]
+            mapa_opcoes = {f"{chr(65+j)}) {op}": op for j, op in enumerate(opcoes)}
+            
+            val_atual_fmt = None
+            if resp_atual in opcoes:
+                for k_f, v_o in mapa_opcoes.items():
+                    if v_o == resp_atual:
+                        val_atual_fmt = k_f
+                        break
+            
+            escolha_fmt = st.radio(f"radio_{tipo_key}_{i}_{q['id']}", opcoes_formatadas, index=opcoes_formatadas.index(val_atual_fmt) if val_atual_fmt in opcoes_formatadas else None, key=f"val_{tipo_key}_{i}", label_visibility="collapsed")
+            if escolha_fmt is not None:
+                st.session_state[respostas_key][i] = mapa_opcoes[escolha_fmt]
             st.divider()
 
         if st.session_state.erro_finalizacao:
@@ -561,25 +572,53 @@ def main():
         "Créditos"
     ]
 
-    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR INTERATIVO (Com callbacks diretos para evitar conflitos)
-    st.markdown("### 🧭 Menu Principal Rápido")
-    c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        if st.button("📚 Treino Geral", use_container_width=True, key="b_treino"):
+    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COMPLETO E FUNCIONAL EM DUAS LINHAS DE BOTÕES
+    st.markdown("### 🧭 Painel de Navegação Rápida")
+    
+    col_n1, col_n2, col_n3, col_n4, col_n5 = st.columns(5)
+    with col_n1:
+        if st.button("📚 Treino Geral", use_container_width=True, key="top_tg"):
             st.session_state.menu_ativo = "Treino Geral"
             st.rerun()
-    with c2:
-        if st.button("🏆 Ranking", use_container_width=True, key="b_ranking"):
+    with col_n2:
+        if st.button("🔍 Por Tópico", use_container_width=True, key="top_tp"):
+            st.session_state.menu_ativo = "Treino por Tópico"
+            st.rerun()
+    with col_n3:
+        if st.button("📝 Essentials", use_container_width=True, key="top_se"):
+            st.session_state.menu_ativo = "Simulado Linux Essentials (60 Q)"
+            st.rerun()
+    with col_n4:
+        if st.button("⚡ LPIC-1", use_container_width=True, key="top_s1"):
+            st.session_state.menu_ativo = "Simulado LPIC-1 (40 Q)"
+            st.rerun()
+    with col_n5:
+        if st.button("🚀 LPIC-2", use_container_width=True, key="top_s2"):
+            st.session_state.menu_ativo = "Simulado LPIC-2 (40 Q)"
+            st.rerun()
+
+    col_n6, col_n7, col_n8, col_n9, col_n10 = st.columns(5)
+    with col_n6:
+        if st.button("🔥 Misto 1+2", use_container_width=True, key="top_sm"):
+            st.session_state.menu_ativo = "Simulado Misto LPIC-1 + LPIC-2 (40 Q)"
+            st.rerun()
+    with col_n7:
+        if st.button("🎯 Sim. Geral", use_container_width=True, key="top_sg"):
+            st.session_state.menu_ativo = "Simulado Geral (Misto 60 Q)"
+            st.rerun()
+    with col_n8:
+        if st.button("🏆 Ranking", use_container_width=True, key="top_rk"):
             st.session_state.menu_ativo = "Ranking de Notas"
             st.rerun()
-    with c3:
-        if st.button("🔓 Materiais VIP", use_container_width=True, key="b_vip"):
+    with col_n9:
+        if st.button("🔓 Materiais VIP", use_container_width=True, key="top_vip"):
             st.session_state.menu_ativo = "Materiais VIP"
             st.rerun()
-    with c4:
-        if st.button("ℹ️ Créditos", use_container_width=True, key="b_cred"):
+    with col_n10:
+        if st.button("ℹ️ Créditos", use_container_width=True, key="top_cred"):
             st.session_state.menu_ativo = "Créditos"
             st.rerun()
+            
     st.markdown("---")
 
     modo = st.session_state.menu_ativo
@@ -590,14 +629,25 @@ def main():
         st.markdown("---")
         for i, q in enumerate(st.session_state.banco_essentials, 1):
             st.markdown(f"**Questão {i}: {q['pergunta']}**")
-            resp_t = st.radio(f"tg_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            opcoes_q = q['opcoes_fixas']
+            opcoes_fmt = [f"{chr(65+j)}) {op}" for j, op in enumerate(opcoes_q)]
+            mapa_fmt = {f"{chr(65+j)}) {op}": op for j, op in enumerate(opcoes_q)}
+            
+            resp_t = st.radio(f"tg_{i}_{q['id']}", opcoes_fmt, index=None, label_visibility="collapsed", key=f"radio_tg_{i}")
             
             if resp_t:
+                resp_escolhida = mapa_fmt[resp_t]
                 resp_certa = q.get('resposta_oficial', 'Não informada')
-                if verificar_acerto(resp_t, resp_certa):
+                if verificar_acerto(resp_escolhida, resp_certa):
                     st.success(f"Resposta Correta: {resp_t}")
                 else:
-                    st.error(f"Sua resposta: {resp_t} | Correta: {resp_certa}")
+                    # Acha a letra da resposta certa para exibir bonitinho
+                    letra_certa = ""
+                    for k_f, v_o in mapa_fmt.items():
+                        if verificar_acerto(v_o, resp_certa):
+                            letra_certa = k_f
+                            break
+                    st.error(f"Sua resposta: {resp_t} | Correta: {letra_certa if letra_certa else resp_certa}")
                 
                 st.info(obter_comentario(q['pergunta'], resp_certa))
             st.divider()
@@ -613,14 +663,24 @@ def main():
         questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials') == t]
         for i, q in enumerate(questoes_filtradas, 1):
             st.markdown(f"**Questão {i}: {q['pergunta']}**")
-            resp_top = st.radio(f"tp_{i}_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            opcoes_q = q['opcoes_fixas']
+            opcoes_fmt = [f"{chr(65+j)}) {op}" for j, op in enumerate(opcoes_q)]
+            mapa_fmt = {f"{chr(65+j)}) {op}": op for j, op in enumerate(opcoes_q)}
+            
+            resp_top = st.radio(f"tp_{i}_{q['id']}_{t}", opcoes_fmt, index=None, label_visibility="collapsed", key=f"radio_tp_{i}")
             
             if resp_top:
+                resp_escolhida = mapa_fmt[resp_top]
                 resp_certa = q.get('resposta_oficial', 'Não informada')
-                if verificar_acerto(resp_top, resp_certa):
+                if verificar_acerto(resp_escolhida, resp_certa):
                     st.success(f"Resposta Correta: {resp_top}")
                 else:
-                    st.error(f"Sua resposta: {resp_top} | Correta: {resp_certa}")
+                    letra_certa = ""
+                    for k_f, v_o in mapa_fmt.items():
+                        if verificar_acerto(v_o, resp_certa):
+                            letra_certa = k_f
+                            break
+                    st.error(f"Sua resposta: {resp_top} | Correta: {letra_certa if letra_certa else resp_certa}")
                 
                 st.info(obter_comentario(q['pergunta'], resp_certa))
             st.divider()
