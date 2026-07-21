@@ -24,7 +24,7 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1, h2, h3 {{ color: #60a5fa !important; }}
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
             .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover {{ background-color: #1f2937 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             .custom-link-btn {{
                 display: block;
@@ -315,7 +315,15 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
-    st.markdown(f"## {titulo_pagina}")
+    # 🌟 BOTÃO DE VOLTAR BEM VISÍVEL NO TOPO DE CADA SIMULADO
+    col_v1, col_v2 = st.columns([1, 4])
+    with col_v1:
+        if st.button("🏠 Menu Principal", key=f"btn_voltar_home_{tipo_key}"):
+            st.session_state.menu_selecionado = "Treino Geral"
+            st.rerun()
+    with col_v2:
+        st.markdown(f"### {titulo_pagina}")
+    st.markdown("---")
     
     ativo_key = f"ativo_{tipo_key}"
     inicio_key = f"inicio_{tipo_key}"
@@ -374,7 +382,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         
         st.markdown("---")
         
-        if st.button("🚪 Abandonar Prova e Voltar", key=f"btn_abandonar_ativo_{tipo_key}"):
+        if st.button("🚪 Abandonar Prova e Voltar ao Início", key=f"btn_abandonar_ativo_{tipo_key}"):
             st.session_state[ativo_key] = False
             st.session_state[finalizado_key] = False
             st.session_state.simulado_em_andamento = None
@@ -559,12 +567,33 @@ def main():
         "Créditos"
     ]
 
-    st.sidebar.markdown("### 🧭 Painel de Navegação")
-    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, label_visibility="collapsed")
+    # Estado persistente para a aba ativa
+    if 'menu_selecionado' not in st.session_state:
+        st.session_state.menu_selecionado = "Treino Geral"
 
-    # 🌟 MENU DE NAVEGAÇÃO RÁPIDA NO TOPO DA PÁGINA (Funciona perfeitamente e troca de aba instantaneamente)
-    st.markdown("### 🧭 Painel de Navegação Rápida")
-    modo = st.selectbox("Escolha a Seção do Sistema:", opcoes_menu, index=opcoes_menu.index(modo), label_visibility="collapsed", key="select_topo_navegacao")
+    st.sidebar.markdown("### 🧭 Painel de Navegação")
+    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_selecionado), key="radio_sidebar_nav")
+    st.session_state.menu_selecionado = modo
+
+    # 🌟 BARRA DE MENU SUPERIOR COM BOTÕES GRANDES E VISÍVEIS
+    st.markdown("### 🧭 Menu Principal Rápido")
+    col_topo1, col_topo2, col_topo3, col_topo4 = st.columns(4)
+    with col_topo1:
+        if st.button("📚 Treino Geral", use_container_width=True):
+            st.session_state.menu_selecionado = "Treino Geral"
+            st.rerun()
+    with col_topo2:
+        if st.button("🏆 Ranking", use_container_width=True):
+            st.session_state.menu_selecionado = "Ranking de Notas"
+            st.rerun()
+    with col_topo3:
+        if st.button("🔓 Materiais VIP", use_container_width=True):
+            st.session_state.menu_selecionado = "Materiais VIP"
+            st.rerun()
+    with col_topo4:
+        if st.button("ℹ️ Créditos", use_container_width=True):
+            st.session_state.menu_selecionado = "Créditos"
+            st.rerun()
     st.markdown("---")
 
     if modo == "Treino Geral":
