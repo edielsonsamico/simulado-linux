@@ -10,14 +10,11 @@ from datetime import datetime
 def injetar_estilo_profissional():
     st.markdown("""
         <style>
-        /* Fundo geral e tipografia elegante */
         .stApp {
             background-color: #0f172a;
             color: #f8fafc;
             font-family: 'Inter', sans-serif;
         }
-        
-        /* Estilização da Barra Lateral */
         section[data-testid="stSidebar"] {
             background-color: #1e293b;
             border-right: 1px solid #334155;
@@ -26,13 +23,9 @@ def injetar_estilo_profissional():
             color: #cbd5e1 !important;
             font-weight: 500;
         }
-        
-        /* Cards e Blocos de Informação */
         .element-container, .stMarkdown {
             color: #f8fafc;
         }
-        
-        /* Botões com padrão executivo */
         .stButton button {
             background-color: #2563eb;
             color: white;
@@ -47,14 +40,10 @@ def injetar_estilo_profissional():
             background-color: #1d4ed8;
             box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3);
         }
-        
-        /* Métricas estilizadas */
         [data-testid="stMetricValue"] {
             color: #38bdf8 !important;
             font-weight: 700;
         }
-        
-        /* Alertas e caixas informativas */
         .stAlert {
             background-color: #1e293b !important;
             color: #f8fafc !important;
@@ -542,7 +531,7 @@ def main():
         t = st.selectbox("Selecione o Módulo de Estudo:", topicos)
         st.markdown("---")
         
-        questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials'] == t]
+        questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials') == t]
         for i, q in enumerate(questoes_filtradas, 1):
             st.markdown(f"**Questão {i}: {q['pergunta']}**")
             resp_top = st.radio(f"tp_{i}_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
