@@ -12,10 +12,12 @@ def gerar_hash_conteudo(pergunta):
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def inferir_resposta_correta(pergunta, opcoes):
-    """Infere a resposta correta com base no conteúdo da pergunta."""
+    """Fallback inteligente para casos onde a questão não traga a resposta preenchida."""
     p = pergunta.lower()
-    
     termos_chave = {
+        "suid": "-perm",
+        "conectividad": "ping",
+        "cron.allow": "todos",
         "linha inteira": "dd",
         "pacotes atualmente instalados": "rpm -qa",
         "máxima criticidade": "emerg",
@@ -42,13 +44,11 @@ def inferir_resposta_correta(pergunta, opcoes):
         "variáveis de ambiente que foram exportadas": "export",
         "localiza caminhos": "locate"
     }
-    
     for chave, termo in termos_chave.items():
         if chave in p:
             for op in opcoes:
                 if termo in op.lower():
                     return op
-                    
     return opcoes[0] if opcoes else "Não informada"
 
 def carregar_banco_unico():
@@ -71,24 +71,21 @@ def carregar_banco_unico():
             
             resp_oficial = None
             
-            # 1. Procura especificamente pelas chaves 'resposta' ou 'correta'
-            for chave_alvo in ['resposta', 'correta', 'gabarito', 'resp']:
-                if chave_alvo in q and q[chave_alvo] is not None:
-                    val = q[chave_alvo]
-                    val_str = str(val).strip()
-                    if val_str.isdigit() and len(opcoes_originais) > 0:
-                        idx = int(val_str)
-                        if 0 <= idx < len(opcoes_originais):
-                            resp_oficial = str(opcoes_originais[idx]).strip()
-                            break
-                    else:
-                        resp_oficial = val_str
-                        break
+            # Pega diretamente o valor armazenado na chave 'correta' do tópico
+            if 'correta' in q and q['correta'] is not None:
+                val = str(q['correta']).strip()
+                # Se por acaso estiver em formato de índice numérico
+                if val.isdigit() and len(opcoes_originais) > 0:
+                    idx = int(val)
+                    if 0 <= idx < len(opcoes_originais):
+                        resp_oficial = str(opcoes_originais[idx]).strip()
+                else:
+                    resp_oficial = val
             
-            # 2. Se não encontrar nas chaves diretas, usa a inferência inteligente baseada na pergunta
-            if not resp_oficial or resp_oficial == "Não informada":
+            # Se não encontrou ou veio vazio, utiliza a inferência técnica baseada na pergunta
+            if not resp_oficial or resp_oficial == "":
                 resp_oficial = inferir_resposta_correta(q['pergunta'], q_copia['opcoes_fixas'])
-
+                
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
             
