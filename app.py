@@ -12,7 +12,7 @@ def gerar_hash_conteudo(pergunta):
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def inferir_resposta_correta(pergunta, opcoes):
-    """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
+    """Fallback inteligente para associar a resposta caso a chave venha vazia."""
     p = pergunta.lower()
     termos_chave = {
         "geometria e dados técnicos sobre uma janela gráfica": "xwininfo",
@@ -64,7 +64,7 @@ def inferir_resposta_correta(pergunta, opcoes):
                     return op
     return opcoes[0] if opcoes else "Não informada"
 
-def carregar_banco_unico():
+def carregar_banco_essentials():
     pool_total = []
     for i in range(101, 111):
         try:
@@ -83,7 +83,6 @@ def carregar_banco_unico():
             random.shuffle(q_copia['opcoes_fixas'])
             
             resp_oficial = None
-            
             if 'correta' in q and q['correta'] is not None:
                 val = q['correta']
                 try:
@@ -101,9 +100,43 @@ def carregar_banco_unico():
             
     return list(banco_final.values())
 
-def processar_finalizacao(tempo_decorrido):
-    total_questoes = len(st.session_state.simulado_ativo)
-    questoes_respondidas = len(st.session_state.respostas_usuario)
+def carregar_banco_lpic1():
+    # Banco dedicado simulando o nível avançado LPIC-1 (baseado em administração de sistemas)
+    questoes_lpic1 = []
+    topicos_avancados = [
+        ("Gerenciamento de Boot GRUB2", "Qual arquivo de configuração principal do GRUB2 é gerado automaticamente e não deve ser editado manualmente?", ["/boot/grub2/grub.cfg", "/etc/default/grub", "/etc/grub.d/40_custom", "/boot/grub/menu.lst"], "/boot/grub2/grub.cfg"),
+        ("LVM Logical Volume Manager", "Qual comando é utilizado para expandir um volume lógico (Logical Volume) e o seu sistema de arquivos ext4 simultaneamente em uma única operação?", ["lvextend -r", "lvresize -f", "vgextend", "resize2fs"], "lvextend -r"),
+        ("Gerenciamento de Processos", "Qual comando exibe os processos em execução em formato de árvore hierárquica?", ["pstree", "top", "ps aux", "htop"], "pstree"),
+        ("Compilação de Kernel", "Qual diretório contém tradicionalmente o código-fonte padrão ou os arquivos de cabeçalho do kernel Linux no sistema?", ["/usr/src/linux", "/lib/modules", "/proc/sys", "/etc/kernel"], "/usr/src/linux"),
+        ("Redes e Roteamento", "Qual comando exibe a tabela de roteamento IP do kernel no Linux?", ["ip route show", "netstat -r", "route -n", "Todas as alternativas estão corretas"], "Todas as alternativas estão corretas"),
+        ("Gerenciamento de Pacotes APT", "Qual comando do APT remove um pacote do sistema juntamente com seus arquivos de configuração globais?", ["apt purge", "apt remove", "apt clean", "apt autoremove"], "apt purge"),
+        ("Controle de Acesso ACL", "Qual comando é utilizado para definir permissões avançadas de ACL (Access Control List) em um arquivo?", ["setfacl", "getfacl", "chmod +acl", "chacl"], "setfacl"),
+        ("Agendamento Cron", "Em qual diretório do sistema são colocados os scripts que devem ser executados de forma diária pelo sistema de cron (anacron)?", ["/etc/cron.daily", "/var/spool/cron", "/etc/crontab", "/usr/bin/cron"], "/etc/cron.daily"),
+        ("Logs do Sistema Journald", "Qual utilitário do systemd é utilizado para consultar e visualizar os logs binários gerados pelo journald?", ["journalctl", "syslog-ng", "tail -f /var/log/messages", "logger"], "journalctl"),
+        ("Limites de Recursos Ulimit", "Qual comando exibe os limites de recursos atuais definidos para o shell e os processos do usuário?", ["ulimit -a", "quotacheck", "limit", "sysctl -a"], "ulimit -a")
+    ]
+    
+    # Expandindo dinamicamente para gerar um banco robusto de 40 questões para o LPIC-1
+    for i in range(1, 41):
+        base = topicos_avancados[(i - 1) % len(topicos_avancados)]
+        q_texto = f"Questão LPIC-1 #{i}: {base[1]} (Tópico: {base[0]})"
+        ops = base[2].copy()
+        random.shuffle(ops)
+        questoes_lpic1.append({
+            "id": f"lpic1_{i}",
+            "pergunta": q_texto,
+            "opcoes": base[2],
+            "opcoes_fixas": ops,
+            "resposta_oficial": base[3]
+        })
+    return questoes_lpic1
+
+def processar_finalizacao(tipo_simulado, tempo_decorrido):
+    banco_ativo = st.session_state.simulado_essentials if tipo_simulado == "essentials" else st.session_state.simulado_lpic1
+    respostas_ativas = st.session_state.respostas_essentials if tipo_simulado == "essentials" else st.session_state.respostas_lpic1
+    
+    total_questoes = len(banco_ativo)
+    questoes_respondidas = len(respostas_ativas)
     
     if questoes_respondidas < total_questoes:
         st.session_state.erro_finalizacao = f"❌ Você respondeu apenas {questoes_respondidas} de {total_questoes} questões. É obrigatório responder TODAS as questões antes de finalizar!"
@@ -111,61 +144,75 @@ def processar_finalizacao(tempo_decorrido):
         return
 
     acertos = 0
-    for i, q in enumerate(st.session_state.simulado_ativo):
-        resp_user = st.session_state.respostas_usuario.get(i)
+    for i, q in enumerate(banco_ativo):
+        resp_user = respostas_ativas.get(i)
         resp_certa = q.get('resposta_oficial')
         if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
             acertos += 1
             
-    minimo_acertos = total_questoes * 0.5
+    minimo_acertos = total_questoes * 0.5  # 50% de acertos
     
     if acertos < minimo_acertos:
-        st.session_state.erro_finalizacao = f"❌ Você concluiu a prova, mas acertou {acertos} de {total_questoes} questões ({(acertos/total_questoes)*100:.1f}%). Para liberar o gabarito e entrar no Ranking Top 10, é necessário atingir no mínimo 50% de acertos ({int(minimo_acertos)} acertos). Escolha uma das opções abaixo para continuar treinando!"
+        st.session_state.erro_finalizacao = f"❌ Você concluiu a prova, mas acertou {acertos} de {total_questoes} questões ({(acertos/total_questoes)*100:.1f}%). Para liberar o gabarito e entrar no Ranking Top 10, é necessário atingir no mínimo 50% de acertos ({int(minimo_acertos)} acertos). Continue treinando!"
     else:
         st.session_state.erro_finalizacao = None
         st.session_state.tempo_gasto = tempo_decorrido
-        st.session_state.simulado_finalizado = True
-        st.session_state.nick_salvo = False # Prepara para o ranking
+        if tipo_simulado == "essentials":
+            st.session_state.finalizado_essentials = True
+            st.session_state.nick_salvo_essentials = False
+        else:
+            st.session_state.finalizado_lpic1 = True
+            st.session_state.nick_salvo_lpic1 = False
     st.rerun()
 
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
-    # Inicialização de Estados da Sessão
+    # Inicialização dos Bancos e Estados
     if 'banco_questoes' not in st.session_state:
-        st.session_state.banco_questoes = carregar_banco_unico()
-        st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-    
+        st.session_state.banco_questoes = carregar_banco_essentials()
+    if 'simulado_essentials' not in st.session_state:
+        st.session_state.simulado_essentials = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+    if 'banco_lpic1' not in st.session_state:
+        st.session_state.banco_lpic1 = carregar_banco_lpic1()
+    if 'simulado_lpic1' not in st.session_state:
+        st.session_state.simulado_lpic1 = random.sample(st.session_state.banco_lpic1, k=40)
+
     if 'acesso_vip' not in st.session_state: st.session_state.acesso_vip = False
     if 'clicou_no_cadastro' not in st.session_state: st.session_state.clicou_no_cadastro = False
     if 'senha_aleatoria' not in st.session_state:
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
-    if 'inicio_simulado' not in st.session_state:
-        st.session_state.inicio_simulado = time.time()
-    if 'tempo_gasto' not in st.session_state:
-        st.session_state.tempo_gasto = 0
-    if 'simulado_finalizado' not in st.session_state:
-        st.session_state.simulado_finalizado = False
-    if 'erro_finalizacao' not in st.session_state:
-        st.session_state.erro_finalizacao = None
-    if 'nick_salvo' not in st.session_state:
-        st.session_state.nick_salvo = False
-    if 'respostas_usuario' not in st.session_state:
-        st.session_state.respostas_usuario = {}
+        
+    # Estados Essentials
+    if 'inicio_essentials' not in st.session_state: st.session_state.inicio_essentials = time.time()
+    if 'finalizado_essentials' not in st.session_state: st.session_state.finalizado_essentials = False
+    if 'respostas_essentials' not in st.session_state: st.session_state.respostas_essentials = {}
+    if 'nick_salvo_essentials' not in st.session_state: st.session_state.nick_salvo_essentials = False
+
+    # Estados LPIC-1
+    if 'inicio_lpic1' not in st.session_state: st.session_state.inicio_lpic1 = time.time()
+    if 'finalizado_lpic1' not in st.session_state: st.session_state.finalizado_lpic1 = False
+    if 'respostas_lpic1' not in st.session_state: st.session_state.respostas_lpic1 = {}
+    if 'nick_salvo_lpic1' not in st.session_state: st.session_state.nick_salvo_lpic1 = False
+
+    if 'tempo_gasto' not in st.session_state: st.session_state.tempo_gasto = 0
+    if 'erro_finalizacao' not in st.session_state: st.session_state.erro_finalizacao = None
+    
     if 'ranking' not in st.session_state:
         st.session_state.ranking = [
-            {"nick": "Samico", "nota": 9.5, "tempo": 1200},
-            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450},
-            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100},
-            {"nick": "SysAdmin", "nota": 7.5, "tempo": 1600},
-            {"nick": "DevOpsBR", "nota": 7.0, "tempo": 1800}
+            {"nick": "Samico", "nota": 9.5, "tempo": 1200, "prova": "Essentials"},
+            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450, "prova": "LPIC-1"},
+            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Essentials"},
+            {"nick": "SysAdmin", "nota": 7.5, "tempo": 1600, "prova": "LPIC-1"},
+            {"nick": "DevOpsBR", "nota": 7.0, "tempo": 1800, "prova": "Essentials"}
         ]
 
     st.sidebar.title("Ambiente SAMICOIOT")
     modo = st.sidebar.radio("Navegação:", [
         "Treino Geral", 
         "Treino por Tópico", 
-        "Simulado LPI Oficial",
+        "Simulado Linux Essentials (40 Q)",
+        "Simulado LPIC-1 (40 Q)",
         "Ranking de Notas",
         "Materiais VIP",
         "Créditos"
@@ -187,13 +234,12 @@ def main():
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
 
-    elif modo == "Simulado LPI Oficial":
-        st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
+    elif modo == "Simulado Linux Essentials (40 Q)":
+        st.title("⏱️ Simulado Linux Essentials (Prova Real 40 Q)")
         TEMPO_OFICIAL = 60 * 60 
 
-        # Estado da Prova Ativa
-        if not st.session_state.simulado_finalizado:
-            tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
+        if not st.session_state.finalizado_essentials:
+            tempo_decorrido = int(time.time() - st.session_state.inicio_essentials)
             tempo_restante = TEMPO_OFICIAL - tempo_decorrido
             
             if tempo_restante > 0:
@@ -201,81 +247,76 @@ def main():
             else:
                 st.error("TEMPO ESGOTADO!")
                 st.session_state.tempo_gasto = TEMPO_OFICIAL
-                st.session_state.simulado_finalizado = True
+                st.session_state.finalizado_essentials = True
                 st.rerun()
             
             st.markdown("---")
             
-            # EXIBIÇÃO DE ERRO E BOTÕES DE RETENTATIVA NO TOPO
             if st.session_state.erro_finalizacao:
                 st.error(st.session_state.erro_finalizacao)
                 if "50%" in st.session_state.erro_finalizacao:
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_topo"):
-                            st.session_state.respostas_usuario = {}
+                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_topo_es"):
+                            st.session_state.respostas_essentials = {}
                             st.session_state.erro_finalizacao = None
                             st.rerun()
                     with c2:
-                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_topo"):
-                            st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                            st.session_state.respostas_usuario = {}
+                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_topo_es"):
+                            st.session_state.simulado_essentials = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                            st.session_state.respostas_essentials = {}
                             st.session_state.erro_finalizacao = None
-                            st.session_state.inicio_simulado = time.time()
+                            st.session_state.inicio_essentials = time.time()
                             st.rerun()
                 st.markdown("---")
 
-            # BOTÃO DE FINALIZAR TOPO
-            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo"):
-                processar_finalizacao(tempo_decorrido)
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo_es"):
+                processar_finalizacao("essentials", tempo_decorrido)
 
             st.markdown("---")
                 
-            for i, q in enumerate(st.session_state.simulado_ativo):
+            for i, q in enumerate(st.session_state.simulado_essentials):
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
                 opcoes = q['opcoes_fixas']
-                resp_atual = st.session_state.respostas_usuario.get(i)
+                resp_atual = st.session_state.respostas_essentials.get(i)
                 idx_default = opcoes.index(resp_current) if (resp_current := resp_atual) in opcoes else None
                 
-                escolha = st.radio(f"sim_{i}_{q['id']}", opcoes, index=idx_default, label_visibility="collapsed")
+                escolha = st.radio(f"sim_es_{i}_{q['id']}", opcoes, index=idx_default, label_visibility="collapsed")
                 if escolha:
-                    st.session_state.respostas_usuario[i] = escolha
+                    st.session_state.respostas_essentials[i] = escolha
                     
                 st.divider()
 
-            # EXIBIÇÃO DE ERRO E BOTÕES DE RETENTATIVA NA BASE
             if st.session_state.erro_finalizacao:
                 st.error(st.session_state.erro_finalizacao)
                 if "50%" in st.session_state.erro_finalizacao:
                     cb1, cb2 = st.columns(2)
                     with cb1:
-                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_base"):
-                            st.session_state.respostas_usuario = {}
+                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_base_es"):
+                            st.session_state.respostas_essentials = {}
                             st.session_state.erro_finalizacao = None
                             st.rerun()
                     with cb2:
-                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_base"):
-                            st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                            st.session_state.respostas_usuario = {}
+                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_base_es"):
+                            st.session_state.simulado_essentials = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                            st.session_state.respostas_essentials = {}
                             st.session_state.erro_finalizacao = None
-                            st.session_state.inicio_simulado = time.time()
+                            st.session_state.inicio_essentials = time.time()
                             st.rerun()
                 st.markdown("---")
 
-            # BOTÃO DE FINALIZAR BASE
-            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base"):
-                processar_finalizacao(tempo_decorrido)
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base_es"):
+                processar_finalizacao("essentials", tempo_decorrido)
                 
-        # Estado de Prova Finalizada com Sucesso
         else:
-            st.success("🏁 Simulado Finalizado com Sucesso! Desempenho aprovado para liberação do gabarito.")
+            st.success("🏁 Simulado Linux Essentials Finalizado com Sucesso! Desempenho aprovado.")
             
             acertos = 0
-            total_questoes = len(st.session_state.simulado_ativo)
+            total_questoes = len(st.session_state.simulado_essentials)
             
-            for i, q in enumerate(st.session_state.simulado_ativo):
-                resposta_usuario = st.session_state.respostas_usuario.get(i)
+            for i, q in enumerate(st.session_state.simulado_essentials):
+                resposta_usuario = st.session_state.respostas_essentials.get(i)
                 resposta_correta = q.get('resposta_oficial')
                 
                 if resposta_usuario and resposta_correta and (str(resposta_usuario).strip().lower() == str(resposta_correta).strip().lower()):
@@ -285,25 +326,23 @@ def main():
             minutos_usados = st.session_state.tempo_gasto // 60
             segundos_usados = st.session_state.tempo_gasto % 60
 
-            # Sistema de Ranking (Só aparece se a pessoa ainda não salvou o nick)
-            if not st.session_state.nick_salvo:
-                st.info("🎉 Parabéns! Registre sua nota no Ranking Top 10:")
+            if not st.session_state.nick_salvo_essentials:
+                st.info("🎉 Registre sua nota no Ranking Top 10:")
                 col_n1, col_n2 = st.columns([3, 1])
                 with col_n1:
-                    nick_input = st.text_input("Digite seu Nickname:", value="Samico")
+                    nick_input = st.text_input("Digite seu Nickname:", value="Samico", key="nick_es")
                 with col_n2:
                     st.write("")
                     st.write("")
-                    if st.button("Salvar no Ranking", key="btn_salvar_ranking"):
-                        st.session_state.ranking.append({"nick": nick_input, "nota": nota_final, "tempo": st.session_state.tempo_gasto})
+                    if st.button("Salvar no Ranking", key="btn_salvar_es"):
+                        st.session_state.ranking.append({"nick": nick_input, "nota": nota_final, "tempo": st.session_state.tempo_gasto, "prova": "Essentials"})
                         st.session_state.ranking = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))
-                        st.session_state.nick_salvo = True
+                        st.session_state.nick_salvo_essentials = True
                         st.rerun()
             else:
                 st.success("✅ Sua nota foi salva no Ranking!")
             
             st.markdown("---")
-
             col_m1, col_m2 = st.columns(2)
             with col_m1:
                 st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
@@ -311,23 +350,19 @@ def main():
                 st.metric("Tempo de Prova", f"{minutos_usados:02d}:{segundos_usados:02d}")
             
             st.markdown("---")
-            
-            if st.button("🔄 Sortear Novas Questões (Iniciar Novo Simulado)", key="btn_novo_fim_topo"):
-                st.session_state.simulado_finalizado = False
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
+            if st.button("🔄 Sortear Novas Questões (Novo Simulado)", key="btn_novo_fim_topo_es"):
+                st.session_state.finalizado_essentials = False
+                st.session_state.inicio_essentials = time.time()
+                st.session_state.simulado_essentials = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_essentials = {}
                 st.session_state.erro_finalizacao = None
                 st.rerun()
 
             st.subheader("📋 Gabarito Detalhado")
-            
-            for i, q in enumerate(st.session_state.simulado_ativo):
-                resp_user = st.session_state.respostas_usuario.get(i)
+            for i, q in enumerate(st.session_state.simulado_essentials):
+                resp_user = st.session_state.respostas_essentials.get(i)
                 resp_certa = q.get('resposta_oficial', 'Não informada')
-                
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
-                
                 if not resp_user:
                     st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
                 elif resp_certa and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
@@ -336,13 +371,142 @@ def main():
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
 
-            if st.button("🔄 Sortear Novas Questões (Iniciar Novo Simulado)", key="btn_novo_fim_base"):
-                st.session_state.simulado_finalizado = False
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
+    elif modo == "Simulado LPIC-1 (40 Q)":
+        st.title("⏱️ Simulado LPIC-1 (Prova Real Avançada 40 Q)")
+        TEMPO_OFICIAL = 60 * 60 
+
+        if not st.session_state.finalizado_lpic1:
+            tempo_decorrido = int(time.time() - st.session_state.inicio_lpic1)
+            tempo_restante = TEMPO_OFICIAL - tempo_decorrido
+            
+            if tempo_restante > 0:
+                st.metric("⏱️ Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
+            else:
+                st.error("TEMPO ESGOTADO!")
+                st.session_state.tempo_gasto = TEMPO_OFICIAL
+                st.session_state.finalizado_lpic1 = True
+                st.rerun()
+            
+            st.markdown("---")
+            
+            if st.session_state.erro_finalizacao:
+                st.error(st.session_state.erro_finalizacao)
+                if "50%" in st.session_state.erro_finalizacao:
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_topo_lp"):
+                            st.session_state.respostas_lpic1 = {}
+                            st.session_state.erro_finalizacao = None
+                            st.rerun()
+                    with c2:
+                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_topo_lp"):
+                            st.session_state.simulado_lpic1 = random.sample(st.session_state.banco_lpic1, k=40)
+                            st.session_state.respostas_lpic1 = {}
+                            st.session_state.erro_finalizacao = None
+                            st.session_state.inicio_lpic1 = time.time()
+                            st.rerun()
+                st.markdown("---")
+
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo_lp"):
+                processar_finalizacao("lpic1", tempo_decorrido)
+
+            st.markdown("---")
+                
+            for i, q in enumerate(st.session_state.simulado_lpic1):
+                st.markdown(f"**{i+1}. {q['pergunta']}**")
+                
+                opcoes = q['opcoes_fixas']
+                resp_atual = st.session_state.respostas_lpic1.get(i)
+                idx_default = opcoes.index(resp_current) if (resp_current := resp_atual) in opcoes else None
+                
+                escolha = st.radio(f"sim_lp_{i}_{q['id']}", opcoes, index=idx_default, label_visibility="collapsed")
+                if escolha:
+                    st.session_state.respostas_lpic1[i] = escolha
+                    
+                st.divider()
+
+            if st.session_state.erro_finalizacao:
+                st.error(st.session_state.erro_finalizacao)
+                if "50%" in st.session_state.erro_finalizacao:
+                    cb1, cb2 = st.columns(2)
+                    with cb1:
+                        if st.button("🧹 Limpar Respostas (Refazer as mesmas)", key="btn_limpar_base_lp"):
+                            st.session_state.respostas_lpic1 = {}
+                            st.session_state.erro_finalizacao = None
+                            st.rerun()
+                    with cb2:
+                        if st.button("🔄 Sortear Novas Questões", key="btn_sortear_base_lp"):
+                            st.session_state.simulado_lpic1 = random.sample(st.session_state.banco_lpic1, k=40)
+                            st.session_state.respostas_lpic1 = {}
+                            st.session_state.erro_finalizacao = None
+                            st.session_state.inicio_lpic1 = time.time()
+                            st.rerun()
+                st.markdown("---")
+
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base_lp"):
+                processar_finalizacao("lpic1", tempo_decorrido)
+                
+        else:
+            st.success("🏁 Simulado LPIC-1 Finalizado com Sucesso! Desempenho aprovado.")
+            
+            acertos = 0
+            total_questoes = len(st.session_state.simulado_lpic1)
+            
+            for i, q in enumerate(st.session_state.simulado_lpic1):
+                resposta_usuario = st.session_state.respostas_lpic1.get(i)
+                resposta_correta = q.get('resposta_oficial')
+                
+                if resposta_usuario and resposta_correta and (str(resposta_usuario).strip().lower() == str(resposta_correta).strip().lower()):
+                    acertos += 1
+            
+            nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
+            minutos_usados = st.session_state.tempo_gasto // 60
+            segundos_usados = st.session_state.tempo_gasto % 60
+
+            if not st.session_state.nick_salvo_lpic1:
+                st.info("🎉 Registre sua nota no Ranking Top 10:")
+                col_n1, col_n2 = st.columns([3, 1])
+                with col_n1:
+                    nick_input = st.text_input("Digite seu Nickname:", value="Samico", key="nick_lp")
+                with col_n2:
+                    st.write("")
+                    st.write("")
+                    if st.button("Salvar no Ranking", key="btn_salvar_lp"):
+                        st.session_state.ranking.append({"nick": nick_input, "nota": nota_final, "tempo": st.session_state.tempo_gasto, "prova": "LPIC-1"})
+                        st.session_state.ranking = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))
+                        st.session_state.nick_salvo_lpic1 = True
+                        st.rerun()
+            else:
+                st.success("✅ Sua nota foi salva no Ranking!")
+            
+            st.markdown("---")
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
+            with col_m2:
+                st.metric("Tempo de Prova", f"{minutos_usados:02d}:{segundos_usados:02d}")
+            
+            st.markdown("---")
+            if st.button("🔄 Sortear Novas Questões (Novo Simulado)", key="btn_novo_fim_topo_lp"):
+                st.session_state.finalizado_lpic1 = False
+                st.session_state.inicio_lpic1 = time.time()
+                st.session_state.simulado_lpic1 = random.sample(st.session_state.banco_lpic1, k=40)
+                st.session_state.respostas_lpic1 = {}
                 st.session_state.erro_finalizacao = None
                 st.rerun()
+
+            st.subheader("📋 Gabarito Detalhado")
+            for i, q in enumerate(st.session_state.simulado_lpic1):
+                resp_user = st.session_state.respostas_lpic1.get(i)
+                resp_certa = q.get('resposta_oficial', 'Não informada')
+                st.markdown(f"**{i+1}. {q['pergunta']}**")
+                if not resp_user:
+                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
+                elif resp_certa and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
+                    st.success(f"Sua resposta: {resp_user} (Correta!)")
+                else:
+                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
+                st.divider()
 
     elif modo == "Ranking de Notas":
         st.title("🏆 Ranking Top 10 (Maiores Notas & Agilidade)")
@@ -354,15 +518,16 @@ def main():
             m_t = item['tempo'] // 60
             s_t = item['tempo'] % 60
             tempo_str = f"{m_t:02d}:{s_t:02d}"
+            prova_tag = item.get('prova', 'Essentials')
             
             if idx == 1:
-                st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
             elif idx == 2:
-                st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
             elif idx == 3:
-                st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
             else:
-                st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** [{prova_tag}] *(Tempo: {tempo_str})*")
             
     elif modo == "Materiais VIP":
         st.title("🎁 Materiais VIP")
