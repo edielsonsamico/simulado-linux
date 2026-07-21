@@ -315,15 +315,7 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
-    # 🌟 BOTÃO DE VOLTAR BEM VISÍVEL NO TOPO DE CADA SIMULADO
-    col_v1, col_v2 = st.columns([1, 4])
-    with col_v1:
-        if st.button("🏠 Menu Principal", key=f"btn_voltar_home_{tipo_key}"):
-            st.session_state.menu_selecionado = "Treino Geral"
-            st.rerun()
-    with col_v2:
-        st.markdown(f"### {titulo_pagina}")
-    st.markdown("---")
+    st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
     inicio_key = f"inicio_{tipo_key}"
@@ -382,7 +374,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         
         st.markdown("---")
         
-        if st.button("🚪 Abandonar Prova e Voltar ao Início", key=f"btn_abandonar_ativo_{tipo_key}"):
+        if st.button("🚪 Abandonar Prova e Voltar", key=f"btn_abandonar_ativo_{tipo_key}"):
             st.session_state[ativo_key] = False
             st.session_state[finalizado_key] = False
             st.session_state.simulado_em_andamento = None
@@ -548,8 +540,8 @@ def main():
     st.sidebar.markdown("---")
     
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
-    nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], label_visibility="collapsed")
-    modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)")
+    nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], key="zoom_sidebar", label_visibility="collapsed")
+    modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)", key="dark_sidebar")
 
     aplicar_estilo_acessivel(nivel_zoom, modo_escuro)
 
@@ -567,34 +559,39 @@ def main():
         "Créditos"
     ]
 
-    # Estado persistente para a aba ativa
-    if 'menu_selecionado' not in st.session_state:
-        st.session_state.menu_selecionado = "Treino Geral"
+    # Gerenciador de estado centralizado para a aba ativa
+    if 'menu_atual' not in st.session_state:
+        st.session_state.menu_atual = "Treino Geral"
 
     st.sidebar.markdown("### 🧭 Painel de Navegação")
-    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_selecionado), key="radio_sidebar_nav")
-    st.session_state.menu_selecionado = modo
+    modo_sidebar = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0, key="radio_sidebar_nav")
+    
+    if modo_sidebar != st.session_state.menu_atual:
+        st.session_state.menu_atual = modo_sidebar
+        st.rerun()
 
-    # 🌟 BARRA DE MENU SUPERIOR COM BOTÕES GRANDES E VISÍVEIS
+    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COM BOTÕES REAIS FUNCIONAIS
     st.markdown("### 🧭 Menu Principal Rápido")
-    col_topo1, col_topo2, col_topo3, col_topo4 = st.columns(4)
-    with col_topo1:
-        if st.button("📚 Treino Geral", use_container_width=True):
-            st.session_state.menu_selecionado = "Treino Geral"
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        if st.button("📚 Treino Geral", key="top_btn_treino", use_container_width=True):
+            st.session_state.menu_atual = "Treino Geral"
             st.rerun()
-    with col_topo2:
-        if st.button("🏆 Ranking", use_container_width=True):
-            st.session_state.menu_selecionado = "Ranking de Notas"
+    with c2:
+        if st.button("🏆 Ranking", key="top_btn_ranking", use_container_width=True):
+            st.session_state.menu_atual = "Ranking de Notas"
             st.rerun()
-    with col_topo3:
-        if st.button("🔓 Materiais VIP", use_container_width=True):
-            st.session_state.menu_selecionado = "Materiais VIP"
+    with c3:
+        if st.button("🔓 Materiais VIP", key="top_btn_vip", use_container_width=True):
+            st.session_state.menu_atual = "Materiais VIP"
             st.rerun()
-    with col_topo4:
-        if st.button("ℹ️ Créditos", use_container_width=True):
-            st.session_state.menu_selecionado = "Créditos"
+    with c4:
+        if st.button("ℹ️ Créditos", key="top_btn_cred", use_container_width=True):
+            st.session_state.menu_atual = "Créditos"
             st.rerun()
     st.markdown("---")
+
+    modo = st.session_state.menu_atual
 
     if modo == "Treino Geral":
         st.markdown("## Área de Treino Geral")
