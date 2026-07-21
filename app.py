@@ -15,6 +15,12 @@ def inferir_resposta_correta(pergunta, opcoes):
     """Fallback inteligente para associar a resposta caso a chave venha vazia."""
     p = pergunta.lower()
     termos_chave = {
+        "swap": "swap",
+        "exclusivamente os arquivos de comandos executáveis do usuário": "/usr",
+        "gerenciador de boot alternativo ao antigo lilo": "syslinux",
+        "chipset e dos componentes no barramento pci": "lspci",
+        "sysvinit": "/var/log/messages",
+        "módulos de drivers estão atualmente carregados": "lsmod",
         "geometria e dados técnicos sobre uma janela gráfica": "xwininfo",
         "representação octal tradicional de permissões": "leitura é 4",
         "lsof utilizando especificamente a flag -i": "processos atrelados a conexões de rede e portas abertas",
@@ -63,6 +69,23 @@ def inferir_resposta_correta(pergunta, opcoes):
                 if termo in op.lower():
                     return op
     return opcoes[0] if opcoes else "Não informada"
+
+def obter_comentario(pergunta, resposta_certa):
+    p = pergunta.lower()
+    if "swap" in p:
+        return "Comentário: A partição/espaço de swap é utilizada pelo kernel como memória virtual quando a RAM física atinge o limite."
+    elif "fhs" in p or "usr" in p:
+        return "Comentário: Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
+    elif "lilo" in p or "syslinux" in p:
+        return "Comentário: O Syslinux é uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
+    elif "pci" in p:
+        return "Comentário: O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
+    elif "sysvinit" in p or "messages" in p:
+        return "Comentário: O arquivo `/var/log/messages` centraliza logs gerais do sistema e de eventos do syslog no padrão tradicional."
+    elif "módulos" in p or "lsmod" in p:
+        return "Comentário: O comando `lsmod` lê o arquivo `/proc/modules` para exibir os módulos de driver atualmente carregados na memória."
+    else:
+        return f"Comentário: A alternativa correta é **'{resposta_certa}'**, pois atende diretamente aos requisitos técnicos descritos no enunciado da questão."
 
 def carregar_banco_essentials():
     pool_total = []
@@ -121,6 +144,7 @@ def carregar_banco_lpic1():
         random.shuffle(ops)
         questoes_lpic1.append({
             "id": f"lpic1_{i}",
+            "topico": base[0],
             "pergunta": q_texto,
             "opcoes": base[2],
             "opcoes_fixas": ops,
@@ -149,6 +173,7 @@ def carregar_banco_lpic2():
         random.shuffle(ops)
         questoes_lpic2.append({
             "id": f"lpic2_{i}",
+            "topico": base[0],
             "pergunta": q_texto,
             "opcoes": base[2],
             "opcoes_fixas": ops,
@@ -348,7 +373,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             st.session_state.erro_finalizacao = None
             st.rerun()
 
-        st.subheader("📋 Gabarito Detalhado")
+        st.subheader("📋 Gabarito Detalhado com Respostas Comentadas")
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
             resp_user = st.session_state[respostas_key].get(i)
             resp_certa = q.get('resposta_oficial', 'Não informada')
@@ -359,6 +384,10 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                 st.success(f"Sua resposta: {resp_user} (Correta!)")
             else:
                 st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
+            
+            # Exibe o comentário explicativo detalhado
+            comentario = obter_comentario(q['pergunta'], resp_certa)
+            st.info(comentario)
             st.divider()
 
 def main():
@@ -407,19 +436,45 @@ def main():
     ])
 
     if modo == "Treino Geral":
-        st.title("📖 Área de Treino Geral")
-        for q in st.session_state.banco_essentials:
-            st.markdown(f"**{q['pergunta']}**")
-            st.radio(f"t_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+        st.title("📖 Área de Treino Geral (Questões Numeradas e Comentadas)")
+        st.markdown("Pratique livremente com feedback imediato em cada questão.")
+        st.markdown("---")
+        for i, q in enumerate(st.session_state.banco_essentials, 1):
+            st.markdown(f"**Questão {i}: {q['pergunta']}**")
+            resp_t = st.radio(f"tg_{i}_{q['id']}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            
+            if resp_t:
+                resp_certa = q.get('resposta_oficial', 'Não informada')
+                if str(resp_t).strip().lower() == str(resp_certa).strip().lower():
+                    st.success(f"Resposta Correta: {resp_t}")
+                else:
+                    st.error(f"Sua resposta: {resp_t} | Correta: {resp_certa}")
+                
+                # Comentário explicativo integrado no Treino Geral
+                st.info(obter_comentario(q['pergunta'], resp_certa))
             st.divider()
 
     elif modo == "Treino por Tópico":
-        st.title("🎯 Treino por Tópico")
-        topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_essentials)))
-        t = st.selectbox("Escolha:", topicos)
-        for q in [q for q in st.session_state.banco_essentials if q.get('topico') == t]:
-            st.markdown(f"**{q['pergunta']}**")
-            st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+        st.title("🎯 Treino por Tópico (Questões Numeradas e Comentadas)")
+        topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_essentials if 'topico' in q)))
+        if not topicos:
+            topicos = ["Geral Essentials"]
+        t = st.selectbox("Escolha o Tópico:", topicos)
+        st.markdown("---")
+        
+        questoes_filtradas = [q for q in st.session_state.banco_essentials if q.get('topico', 'Geral Essentials') == t]
+        for i, q in enumerate(questoes_filtradas, 1):
+            st.markdown(f"**Questão {i}: {q['pergunta']}**")
+            resp_top = st.radio(f"tp_{i}_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
+            
+            if resp_top:
+                resp_certa = q.get('resposta_oficial', 'Não informada')
+                if str(resp_top).strip().lower() == str(resp_certa).strip().lower():
+                    st.success(f"Resposta Correta: {resp_top}")
+                else:
+                    st.error(f"Sua resposta: {resp_top} | Correta: {resp_certa}")
+                
+                st.info(obter_comentario(q['pergunta'], resp_certa))
             st.divider()
 
     elif modo == "Simulado Linux Essentials (60 Q)":
