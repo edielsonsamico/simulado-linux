@@ -7,24 +7,14 @@ import string
 import time
 from datetime import datetime
 
-def aplicar_estilo_seguro(tamanho_escolhido):
-    # Mapeia tamanhos seguros que não quebram o layout do Streamlit
-    tamanhos = {
-        "Padrão (100%)": "100%",
-        "Médio (115%)": "115%",
-        "Grande (130%)": "130%"
-    }
-    pct = tamanhos.get(tamanho_escolhido, "100%")
-    
-    st.markdown(f"""
+def aplicar_estilo_limpo():
+    st.markdown("""
         <style>
-        .stApp {{ background-color: #ffffff; color: #111827; font-size: {pct}; overflow-x: hidden !important; }}
-        section[data-testid="stSidebar"] {{ background-color: #f8fafc; color: #111827; }}
-        .stRadio label, .stCheckbox label {{ color: #111827 !important; font-size: {pct} !important; font-weight: 600; }}
-        .stMarkdown, p, span, div, label {{ font-size: {pct} !important; color: #1f2937 !important; }}
-        h1 {{ font-size: 1.8rem !important; color: #1d4ed8 !important; }}
-        h2 {{ font-size: 1.4rem !important; color: #1d4ed8 !important; }}
-        h3 {{ font-size: 1.1rem !important; color: #1d4ed8 !important; }}
+        .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
+        section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
+        h1 { color: #1d4ed8 !important; }
+        h2 { color: #1d4ed8 !important; }
+        h3 { color: #1d4ed8 !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -452,14 +442,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
-
-    st.sidebar.markdown("## LinuxPro Academy")
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("### 👁️ Acessibilidade Visual")
-    # Apenas 3 opções fixas seguras para não quebrar o layout
-    tamanho_fonte = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Médio (115%)", "Grande (130%)"])
-
-    aplicar_estilo_seguro(tamanho_fonte)
+    aplicar_estilo_limpo()
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
@@ -490,6 +473,7 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
+    st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
     modo = st.sidebar.radio("Painel de Navegação:", [
         "Treino Geral", 
@@ -575,7 +559,7 @@ def main():
         
         for nome_cat, tag_cat in categorias:
             st.markdown(f"### Categoria: {nome_cat}")
-            ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova') == tag_cat]
+            ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova'] == tag_cat]
             ranking_ordenado = sorted(ranking_filtrado, key=lambda x: (-x['nota'], x['tempo']))[:10]
             
             if not ranking_ordenado:
