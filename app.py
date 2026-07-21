@@ -28,6 +28,11 @@ def carregar_banco_unico():
             q_copia = q.copy()
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
+            
+            # Padroniza a chave da resposta correta (aceita 'resposta' ou 'correta')
+            resp = q.get('resposta') or q.get('correta')
+            q_copia['resposta_oficial'] = resp
+            
             banco_final[h] = q_copia
     return list(banco_final.values())
 
@@ -78,7 +83,6 @@ def main():
         TEMPO_OFICIAL = 60 * 60 
         
         if not st.session_state.simulado_finalizado:
-            # Exibe o Relógio / Cronômetro Regressivo
             tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
             tempo_restante = TEMPO_OFICIAL - tempo_decorrido
             
@@ -99,12 +103,10 @@ def main():
                 st.radio(f"sim_{q['id']}", q['opcoes_fixas'], key=f"ans_{i}", index=None, label_visibility="collapsed")
                 st.divider()
             
-            # Botão para finalizar o simulado
             if st.button("Finalizar Simulado e Ver Gabarito"):
                 st.session_state.simulado_finalizado = True
                 st.rerun()
         else:
-            # Tela de Resultado, Nota e Gabarito
             st.success("🏁 Simulado Finalizado com Sucesso!")
             
             acertos = 0
@@ -112,11 +114,11 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resposta_usuario = st.session_state.get(f"ans_{i}")
-                resposta_correta = q.get('resposta')
-                if resposta_usuario == resposta_correta:
+                resposta_correta = q.get('resposta_oficial')
+                if resposta_usuario and resposta_correta and (resposta_usuario.strip() == resposta_correta.strip()):
                     acertos += 1
             
-            nota_final = (acertos / total_questoes) * 10
+            nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
             
             st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
             
@@ -125,9 +127,9 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.get(f"ans_{i}", "Não respondida")
-                resp_certa = q.get('resposta', 'Não informada')
+                resp_certa = q.get('resposta_oficial', 'Não informada no banco')
                 
-                if resp_user == resp_certa:
+                if resp_user == resp_certa and resp_user != "Não respondida":
                     st.markdown(f"**{i+1}. {q['pergunta']}**")
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
