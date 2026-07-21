@@ -15,6 +15,7 @@ def inferir_resposta_correta(pergunta, opcoes):
     """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
     p = pergunta.lower()
     termos_chave = {
+        "geometria e dados técnicos sobre uma janela gráfica": "xwininfo",
         "representação octal tradicional de permissões": "leitura é 4",
         "lsof utilizando especificamente a flag -i": "processos atrelados a conexões de rede e portas abertas",
         "protocolo de sincronização temporal ntp": "porta udp 123",
@@ -157,15 +158,15 @@ def main():
     elif modo == "Simulado LPI Oficial":
         st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
         TEMPO_OFICIAL = 60 * 60 
-        
-        # O botão fica visível, mas desativado (disabled=True) se a prova NÃO estiver finalizada
-        botao_novo_desativado = not st.session_state.simulado_finalizado
-        if st.button("🔄 Sortear Novas Questões (Reiniciar Prova)", disabled=botao_novo_desativado, key="btn_novo_geral"):
-            st.session_state.simulado_finalizado = False
-            st.session_state.inicio_simulado = time.time()
-            st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-            st.session_state.respostas_usuario = {}
-            st.rerun()
+
+        # O botão de sortear novas questões SÓ aparece se a prova já foi finalizada
+        if st.session_state.simulado_finalizado:
+            if st.button("🔄 Sortear Novas Questões (Iniciar Novo Simulado)", key="btn_novo_fim"):
+                st.session_state.simulado_finalizado = False
+                st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                st.session_state.respostas_usuario = {}
+                st.rerun()
 
         if not st.session_state.simulado_finalizado:
             tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
