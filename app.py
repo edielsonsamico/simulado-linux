@@ -18,21 +18,21 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
     if modo_escuro:
         st.markdown(f"""
             <style>
-            .stApp { background-color: #0b0f19; color: #f3f4f6; overflow-x: hidden !important; }
-            section[data-testid="stSidebar"] { background-color: #111827; color: #f3f4f6; }
-            .stMarkdown, p, span, label, .stRadio div, .stCheckbox label { font-size: {tamanho_fonte} !important; color: #f3f4f6 !important; }
-            h1, h2, h3 { color: #60a5fa !important; }
+            .stApp {{ background-color: #0b0f19; color: #f3f4f6; overflow-x: hidden !important; }}
+            section[data-testid="stSidebar"] {{ background-color: #111827; color: #f3f4f6; }}
+            .stMarkdown, p, span, label, .stRadio div, .stCheckbox label {{ font-size: {tamanho_fonte} !important; color: #f3f4f6 !important; }}
+            h1, h2, h3 {{ color: #60a5fa !important; }}
             </style>
         """, unsafe_allow_html=True)
     else:
         st.markdown(f"""
             <style>
-            .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
-            section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
-            .stMarkdown, p, span, label, .stRadio div, .stCheckbox label { font-size: {tamanho_fonte} !important; color: #1f2937 !important; }
-            h1 { color: #1d4ed8 !important; font-size: 1.8rem !important; }
-            h2 { color: #1d4ed8 !important; font-size: 1.4rem !important; }
-            h3 { color: #1d4ed8 !important; font-size: 1.2rem !important; }
+            .stApp {{ background-color: #ffffff; color: #111827; overflow-x: hidden !important; }}
+            section[data-testid="stSidebar"] {{ background-color: #f8fafc; color: #111827; }}
+            .stMarkdown, p, span, label, .stRadio div, .stCheckbox label {{ font-size: {tamanho_fonte} !important; color: #1f2937 !important; }}
+            h1 {{ color: #1d4ed8 !important; font-size: 1.8rem !important; }}
+            h2 {{ color: #1d4ed8 !important; font-size: 1.4rem !important; }}
+            h3 {{ color: #1d4ed8 !important; font-size: 1.2rem !important; }}
             </style>
         """, unsafe_allow_html=True)
 
@@ -461,7 +461,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
 
-    # Controles de Acessibilidade Visual na Barra Lateral
+    # Controles de Acessibilidade Visual na Barra Lateral declarados antes de chamar o estilo
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
