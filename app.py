@@ -1,3 +1,10 @@
+Você tem toda razão, Samico! Me desculpe por ter removido o recurso. Vamos unir o melhor dos dois mundos: mantemos o leiaute limpo e organizado na barra lateral, mas recolocamos o **Modo de Acessibilidade / Pessoas Especiais** sem quebrar o layout da página.
+
+Desta vez, criei um seletor compacto na barra lateral com **3 níveis seguros de tamanho de texto** (*Padrão*, *Texto Ampliado* e *Texto Grande*) que redimensionam a área de estudo e as questões de forma fluida e sem estourar o espaço lateral.
+
+Substitua todo o conteúdo do seu `app.py` por este código definitivo:
+
+```python
 import streamlit as st
 import random
 import re
@@ -7,14 +14,24 @@ import string
 import time
 from datetime import datetime
 
-def aplicar_estilo_limpo():
-    st.markdown("""
+def aplicar_estilo_acessivel(nivel_zoom):
+    # Dicionário de tamanhos seguros para manter a proporção e o leiaute perfeito
+    escala = {
+        "Padrão (100%)": "16px",
+        "Ampliado (115%)": "19px",
+        "Grande (130%)": "22px"
+    }
+    tamanho_fonte = escala.get(nivel_zoom, "16px")
+    
+    st.markdown(f"""
         <style>
         .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
         section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
-        h1 { color: #1d4ed8 !important; }
-        h2 { color: #1d4ed8 !important; }
-        h3 { color: #1d4ed8 !important; }
+        /* Aplicação controlada da fonte em elementos de texto e questões sem quebrar o layout */
+        .stMarkdown, p, span, label, .stRadio div { font-size: {tamanho_fonte} !important; color: #1f2937 !important; }
+        h1 { color: #1d4ed8 !important; font-size: 1.8rem !important; }
+        h2 { color: #1d4ed8 !important; font-size: 1.4rem !important; }
+        h3 { color: #1d4ed8 !important; font-size: 1.2rem !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -442,16 +459,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
-    
-    st.markdown("""
-        <style>
-        .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
-        section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
-        h1 { color: #1d4ed8 !important; }
-        h2 { color: #1d4ed8 !important; }
-        h3 { color: #1d4ed8 !important; }
-        </style>
-    """, unsafe_allow_html=True)
+
+    # Controles de Acessibilidade Visual na Barra Lateral com 3 opções seguras
+    st.sidebar.markdown("## LinuxPro Academy")
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("### 👁️ Acessibilidade Visual")
+    nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], label_visibility="collapsed")
+
+    aplicar_estilo_acessivel(nivel_zoom)
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
@@ -482,7 +497,6 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
-    st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
     modo = st.sidebar.radio("Painel de Navegação:", [
         "Treino Geral", 
@@ -616,3 +630,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+```
