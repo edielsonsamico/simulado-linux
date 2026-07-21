@@ -22,10 +22,12 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             section[data-testid="stSidebar"] {{ background-color: #111827; color: #f3f4f6; }}
             .stMarkdown, p, span, label, .stRadio div, .stCheckbox label {{ font-size: {tamanho_fonte} !important; color: #f3f4f6 !important; }}
             h1, h2, h3 {{ color: #60a5fa !important; }}
-            /* Ajuste completo de inputs, botões, links e códigos no Modo Escuro */
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
-            .stButton button, a[data-testid="stLinkButton"] {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover, a[data-testid="stLinkButton"]:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
+            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            a[data-testid="stLinkButton"] {{ background-color: #1d4ed8 !important; color: #ffffff !important; border: none !important; }}
+            a[data-testid="stLinkButton"] p, a[data-testid="stLinkButton"] span {{ color: #ffffff !important; }}
+            a[data-testid="stLinkButton"]:hover {{ background-color: #2563eb !important; color: #ffffff !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             </style>
         """, unsafe_allow_html=True)
@@ -38,6 +40,8 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1 {{ color: #1d4ed8 !important; font-size: 1.8rem !important; }}
             h2 {{ color: #1d4ed8 !important; font-size: 1.4rem !important; }}
             h3 {{ color: #1d4ed8 !important; font-size: 1.2rem !important; }}
+            a[data-testid="stLinkButton"] {{ background-color: #1d4ed8 !important; color: #ffffff !important; }}
+            a[data-testid="stLinkButton"] p, a[data-testid="stLinkButton"] span {{ color: #ffffff !important; }}
             </style>
         """, unsafe_allow_html=True)
 
@@ -616,7 +620,7 @@ def main():
         st.markdown("## Central de Recursos VIP")
         st.markdown("---")
         if not st.session_state.acesso_vip:
-            st.info("🔓 **Desbloqueie o Acesso VIP Completo!**\n\nTenha acesso a apostilas avançadas, guias de terminal e conteúdos exclusivos.")
+            st.info("🔓 **Área de Apoio e Doação Voluntária**\n\nApoie o projeto com qualquer contribuição via Pix e tenha acesso imediato a materiais exclusivos de estudo.")
             
             st.markdown("### Passo 1: Inscreva-se no Canal Oficial")
             if st.link_button("👉 INSCREVA-SE NO CANAL DO YOUTUBE", "https://www.youtube.com/@EdielsonSamico?sub_confirmation=1"):
@@ -624,22 +628,27 @@ def main():
                 
             if st.session_state.clicou_no_cadastro:
                 st.markdown("---")
-                st.markdown("### Passo 2: Contribuição Simbólica via Pix")
-                st.markdown("Faça um Pix no valor simbólico de **R$ 2,00** para apoiar o projeto:")
-                st.code("sua-chave-pix-aqui@email.com", language="text")
+                st.markdown("### Passo 2: Contribuição Voluntária via Pix")
+                st.markdown("Faça uma doação/contribuição para a chave Pix abaixo:")
+                st.code("edielsonsamico@gmail.com", language="text") # Chave Pix atualizada conforme solicitado
+                
+                # Exibição do QR Code estruturado dinamicamente para a chave Pix
+                st.markdown("Ou escaneie o QR Code abaixo com o aplicativo do seu banco:")
+                qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=edielsonsamico@gmail.com"
+                st.image(qr_url, width=200)
                 
                 st.markdown("---")
-                st.markdown("### Passo 3: Validar Credencial")
-                comprovante_input = st.text_input("Insira o código de liberação ou ID da transação Pix:", type="password")
+                st.markdown("### Passo 3: Validar Acesso")
+                comprovante_input = st.text_input("Insira o código de liberação ou ID da transação:", type="password")
                 
                 if st.button("Validar Acesso VIP"):
                     if comprovante_input == st.session_state.senha_aleatoria or comprovante_input == "vip2026":
                         st.session_state.acesso_vip = True
-                        st.success("✅ Pagamento e inscrição confirmados com sucesso!")
+                        st.success("✅ Acesso liberado com sucesso! Obrigado pelo apoio.")
                         time.sleep(1)
                         st.rerun()
                     else:
-                        st.error("❌ Código inválido. Verifique o comprovante ou gere uma chave válida.")
+                        st.error("❌ Código inválido. Verifique o código ou gere uma chave de teste.")
                 
                 if st.button("Gerar Chave de Teste (Admin)"):
                     st.info(f"Chave gerada para teste: **{st.session_state.senha_aleatoria}**")
