@@ -145,7 +145,7 @@ def obter_comentario(pergunta, resposta_certa):
     elif "fhs" in p or "usr" in p:
         return "💡 **Comentário Técnico:** Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
     elif "lilo" in p or "syslinux" in p:
-        return "💡 **Comentário Técnico:** O Syslinux é uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
+        return "💡 **Comentário Técnico:** O Syslinux is uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
     elif "pci" in p:
         return "💡 **Comentário Técnico:** O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
     elif "sysvinit" in p or "messages" in p:
@@ -347,13 +347,21 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha.\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
         
-        if st.button("Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
-            st.session_state.simulado_em_andamento = tipo_key
-            st.session_state[ativo_key] = True
-            st.session_state[inicio_key] = time.time()
-            st.session_state[respostas_key] = {}
-            st.session_state.erro_finalizacao = None
-            st.rerun()
+        col_inic1, col_inic2 = st.columns([2, 2])
+        with col_inic1:
+            if st.button("Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
+                st.session_state.simulado_em_andamento = tipo_key
+                st.session_state[ativo_key] = True
+                st.session_state[inicio_key] = time.time()
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.rerun()
+        with col_inic2:
+            if st.button("⬅️ Voltar ao Início / Menu Principal", key=f"btn_voltar_menu_{tipo_key}"):
+                st.session_state[ativo_key] = False
+                st.session_state[finalizado_key] = False
+                st.session_state.simulado_em_andamento = None
+                st.rerun()
         return
 
     TEMPO_OFICIAL = tempo_minutos * 60 
@@ -374,6 +382,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         
         st.markdown("---")
         
+        # Botão explicito para abandonar/voltar durante a prova ativa
+        if st.button("🚪 Abandonar Prova e Voltar", key=f"btn_abandonar_ativo_{tipo_key}"):
+            st.session_state[ativo_key] = False
+            st.session_state[finalizado_key] = False
+            st.session_state.simulado_em_andamento = None
+            st.rerun()
+        st.markdown("---")
+
         if st.session_state.erro_finalizacao:
             st.error(st.session_state.erro_finalizacao)
             if "50%" in st.session_state.erro_finalizacao:
@@ -470,14 +486,22 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         st.markdown("---")
         st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
         
-        if st.button("Sortear Novo Exame", key=f"btn_novo_fim_{tipo_key}"):
-            st.session_state[finalizado_key] = False
-            st.session_state[ativo_key] = False
-            st.session_state.simulado_em_andamento = None
-            st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
-            st.session_state[respostas_key] = {}
-            st.session_state.erro_finalizacao = None
-            st.rerun()
+        col_f1, col_f2 = st.columns(2)
+        with col_f1:
+            if st.button("Sortear Novo Exame", key=f"btn_novo_fim_{tipo_key}"):
+                st.session_state[finalizado_key] = False
+                st.session_state[ativo_key] = False
+                st.session_state.simulado_em_andamento = None
+                st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.rerun()
+        with col_f2:
+            if st.button("⬅️ Voltar ao Menu Principal", key=f"btn_voltar_fim_{tipo_key}"):
+                st.session_state[finalizado_key] = False
+                st.session_state[ativo_key] = False
+                st.session_state.simulado_em_andamento = None
+                st.rerun()
 
         st.markdown("### Gabarito Analítico com Comentários Técnicos")
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
@@ -702,7 +726,7 @@ def main():
         st.markdown("**LinuxPro Academy** — Desenvolvido por Edielson Samico.")
         st.markdown("---")
         st.markdown("### 💡 Apoie este Projeto")
-        st.markdown("Se esta plataforma te ajudou nos estudos para as certificações Linux e você deseja apoiar a manutenção e criação de novos conteúdos gratuitos para o canal, considere fazer uma contribuição voluntária via Pix:")
+        st.markdown("Se esta plataforma te ajudou nos estudos para das certificações Linux e você deseja apoiar a manutenção e criação de novos conteúdos gratuitos para o canal, considere fazer uma contribuição voluntária via Pix:")
         st.code("samicoiot@gmail.com", language="text")
         
         qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=samicoiot@gmail.com"
