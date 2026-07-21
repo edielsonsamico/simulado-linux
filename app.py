@@ -5,6 +5,7 @@ import importlib
 import hashlib
 import string
 import time
+from datetime import datetime
 
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
@@ -220,8 +221,6 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     else:
         st.session_state.erro_finalizacao = None
         st.session_state.tempo_gasto = tempo_decorrido
-        
-        # Libera a trava global de simulado em andamento
         st.session_state.simulado_em_andamento = None
 
         if tipo_simulado == "essentials":
@@ -257,7 +256,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
 
-    # VERIFICAÇÃO GLOBAL DE SEGURANÇA: Se já houver OUTRO simulado rodando, bloqueia este
     if st.session_state.get("simulado_em_andamento") and st.session_state.get("simulado_em_andamento") != tipo_key:
         outro_ativo = st.session_state.get("simulado_em_andamento")
         st.warning(f"⚠️ **Atenção:** Você já possui um simulado ativo em andamento (`{outro_ativo.upper()}`). \n\nVocê precisa **finalizar** ou **abandonar/cancelar** a prova atual antes de iniciar um novo simulado em outra categoria!")
@@ -272,7 +270,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             st.rerun()
         return
 
-    # 1. TELA DE INICIALIZAÇÃO
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Regras do Simulado Oficial:**\n- {qtd_questoes} Questões de múltipla escolha.\n- Tempo limite: {tempo_minutos} minutos.\n- Obrigatório responder todas as questões.\n- Necessário 50% de acertos para liberar o gabarito e ranking.")
         if st.button("▶️ Iniciar Prova Agora", key=f"btn_iniciar_{tipo_key}"):
@@ -286,7 +283,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
     TEMPO_OFICIAL = tempo_minutos * 60 
 
-    # 2. PROVA EM ANDAMENTO
     if st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         tempo_decorrido = int(time.time() - st.session_state[inicio_key])
         tempo_restante = TEMPO_OFICIAL - tempo_decorrido
@@ -358,7 +354,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         if st.button("Finalizar Simulado e Ver Gabarito", key=f"btn_fin_base_{tipo_key}"):
             processar_finalizacao(tipo_key, tempo_decorrido)
             
-    # 3. PROVA FINALIZADA COM SUCESSO
     elif st.session_state[finalizado_key]:
         st.success(f"🏁 {titulo_pagina} Finalizado com Sucesso!")
         acertos = sum(1 for i, q in enumerate(st.session_state[simulado_ativo_key]) if st.session_state[respostas_key].get(i) and str(st.session_state[respostas_key].get(i)).strip().lower() == str(q.get('resposta_oficial')).strip().lower())
@@ -366,6 +361,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
         
         tag_ranking = {"essentials": "Essentials", "lpic1": "LPIC-1", "lpic2": "LPIC-2", "misto12": "Misto 1+2", "geral": "Geral"}[tipo_key]
+        data_hora_atual = datetime.now().strftime("%d/%0m/%Y às %H:%M") # Correção aplicada
 
         if not st.session_state[nick_salvo_key]:
             st.info("🎉 Registre sua nota no Ranking Top 10:")
@@ -376,7 +372,13 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                 st.write("")
                 st.write("")
                 if st.button("Salvar no Ranking", key=f"btn_salvar_{tipo_key}"):
-                    st.session_state.ranking.append({"nick": nick_input, "nota": nota_final, "tempo": st.session_state.tempo_gasto, "prova": tag_ranking})
+                    st.session_state.ranking.append({
+                        "nick": nick_input, 
+                        "nota": nota_final, 
+                        "tempo": st.session_state.tempo_gasto, 
+                        "prova": tag_ranking,
+                        "data_hora": datetime.now().strftime("%d/%m/%Y às %H:%M")
+                    })
                     st.session_state.ranking = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))
                     st.session_state[nick_salvo_key] = True
                     st.rerun()
@@ -436,11 +438,11 @@ def main():
     
     if 'ranking' not in st.session_state:
         st.session_state.ranking = [
-            {"nick": "Samico", "nota": 9.5, "tempo": 1200, "prova": "Essentials"},
-            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450, "prova": "LPIC-1"},
-            {"nick": "SysAdmin", "nota": 8.2, "tempo": 1300, "prova": "LPIC-2"},
-            {"nick": "DevOpsBR", "nota": 7.9, "tempo": 1350, "prova": "Misto 1+2"},
-            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral"}
+            {"nick": "Samico", "nota": 9.5, "tempo": 1200, "prova": "Essentials", "data_hora": "21/07/2026 às 08:30"},
+            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450, "prova": "LPIC-1", "data_hora": "21/07/2026 às 08:40"},
+            {"nick": "SysAdmin", "nota": 8.2, "tempo": 1300, "prova": "LPIC-2", "data_hora": "21/07/2026 às 08:50"},
+            {"nick": "DevOpsBR", "nota": 7.9, "tempo": 1350, "prova": "Misto 1+2", "data_hora": "21/07/2026 às 08:55"},
+            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
     st.sidebar.title("Ambiente SAMICOIOT")
@@ -515,7 +517,7 @@ def main():
 
     elif modo == "Ranking de Notas":
         st.title("🏆 Rankings Top 10 por Categoria")
-        st.markdown("Confira os melhores desempenhos divididos por cada tipo de simulado. *Critério de desempate: menor tempo de conclusão.*")
+        st.markdown("Confira os melhores desempenhos divididos por cada tipo de simulado com data e horário de conclusão. *Critério de desempate: menor tempo de conclusão.*")
         
         categorias = [
             ("Linux Essentials", "Essentials"),
@@ -537,15 +539,16 @@ def main():
                     m_t = item['tempo'] // 60
                     s_t = item['tempo'] % 60
                     tempo_str = f"{m_t:02d}:{s_t:02d}"
+                    dh_str = item.get('data_hora', '21/07/2026 às 09:00')
                     
                     if idx == 1:
-                        st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                        st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
                     elif idx == 2:
-                        st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                        st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
                     elif idx == 3:
-                        st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                        st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
                     else:
-                        st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+                        st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})* | 📅 `{dh_str}`")
             st.markdown("---")
             
     elif modo == "Materiais VIP":
