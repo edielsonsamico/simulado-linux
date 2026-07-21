@@ -29,19 +29,21 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura ampla para encontrar a resposta correta em qualquer formato do dicionário
+            # Varredura inteligente de chaves comuns de resposta
             resp_oficial = None
-            for chave_possivel in ['resposta', 'correta', 'resp', 'gabarito', 'answer']:
-                if chave_possivel in q and q[chave_possivel]:
-                    resp_oficial = str(q[chave_possivel]).strip()
-                    break
+            for chave in ['resposta', 'correta', 'resp', 'gabarito', 'answer', 'right']:
+                if chave in q and q[chave] is not None:
+                    val = str(q[chave]).strip()
+                    # Se for um número (índice da opção), pega o texto correspondente das opções originais
+                    if val.isdigit() and 'opcoes' in q:
+                        idx = int(val)
+                        if 0 <= idx < len(q['opcoes']):
+                            resp_oficial = str(q['opcoes'][idx]).strip()
+                            break
+                    else:
+                        resp_oficial = val
+                        break
             
-            # Se a resposta estiver salva como índice (ex: 0, 1, 2...), converte para o texto correspondente
-            if resp_oficial and resp_oficial.isdigit() and 'opcoes' in q:
-                idx = int(resp_oficial)
-                if 0 <= idx < len(q['opcoes']):
-                    resp_oficial = str(q['opcoes'][idx]).strip()
-
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
             
@@ -138,13 +140,16 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.get(f"ans_{i}", "Não respondida")
-                resp_certa = q.get('resposta_oficial', 'Não informada no banco')
+                resp_certa = q.get('resposta_oficial')
                 
-                if resp_user and resp_certa and (str(resp_user).strip() == str(resp_certa).strip()):
-                    st.markdown(f"**{i+1}. {q['pergunta']}**")
+                st.markdown(f"**{i+1}. {q['pergunta']}**")
+                
+                if not resp_certa:
+                    # Se ainda vier vazio, mostra as chaves do dicionário para sabermos o nome exato
+                    st.warning(f"Sua resposta: {resp_user} | Atenção: Chaves disponíveis no banco: {list(q.keys())}")
+                elif resp_user and str(resp_user).strip() == str(resp_certa).strip():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
-                    st.markdown(f"**{i+1}. {q['pergunta']}**")
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
 
