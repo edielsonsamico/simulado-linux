@@ -442,7 +442,16 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
-    aplicar_estilo_limpo()
+    
+    st.markdown("""
+        <style>
+        .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
+        section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
+        h1 { color: #1d4ed8 !important; }
+        h2 { color: #1d4ed8 !important; }
+        h3 { color: #1d4ed8 !important; }
+        </style>
+    """, unsafe_allow_html=True)
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
@@ -559,7 +568,7 @@ def main():
         
         for nome_cat, tag_cat in categorias:
             st.markdown(f"### Categoria: {nome_cat}")
-            ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova'] == tag_cat]
+            ranking_filtrado = [r for r in st.session_state.ranking if r.get('prova') == tag_cat]
             ranking_ordenado = sorted(ranking_filtrado, key=lambda x: (-x['nota'], x['tempo']))[:10]
             
             if not ranking_ordenado:
