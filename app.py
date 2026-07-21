@@ -78,14 +78,16 @@ def main():
         TEMPO_OFICIAL = 60 * 60 
         
         if not st.session_state.simulado_finalizado:
+            # Exibe o Relógio / Cronômetro Regressivo
             tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
             tempo_restante = TEMPO_OFICIAL - tempo_decorrido
             
             if tempo_restante > 0:
-                st.metric("Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
+                st.metric("⏱️ Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
             else:
                 st.error("TEMPO ESGOTADO!")
                 st.session_state.simulado_finalizado = True
+                st.rerun()
             
             if st.button("Gerar novo simulado"):
                 st.session_state.inicio_simulado = time.time()
@@ -97,14 +99,46 @@ def main():
                 st.radio(f"sim_{q['id']}", q['opcoes_fixas'], key=f"ans_{i}", index=None, label_visibility="collapsed")
                 st.divider()
             
-            if st.button("Finalizar Simulado"):
+            # Botão para finalizar o simulado
+            if st.button("Finalizar Simulado e Ver Gabarito"):
                 st.session_state.simulado_finalizado = True
                 st.rerun()
         else:
-            st.success("Simulado finalizado!")
-            if st.button("Reiniciar"):
+            # Tela de Resultado, Nota e Gabarito
+            st.success("🏁 Simulado Finalizado com Sucesso!")
+            
+            acertos = 0
+            total_questoes = len(st.session_state.simulado_ativo)
+            
+            for i, q in enumerate(st.session_state.simulado_ativo):
+                resposta_usuario = st.session_state.get(f"ans_{i}")
+                resposta_correta = q.get('resposta')
+                if resposta_usuario == resposta_correta:
+                    acertos += 1
+            
+            nota_final = (acertos / total_questoes) * 10
+            
+            st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
+            
+            st.markdown("---")
+            st.subheader("📋 Gabarito Detalhado")
+            
+            for i, q in enumerate(st.session_state.simulado_ativo):
+                resp_user = st.session_state.get(f"ans_{i}", "Não respondida")
+                resp_certa = q.get('resposta', 'Não informada')
+                
+                if resp_user == resp_certa:
+                    st.markdown(f"**{i+1}. {q['pergunta']}**")
+                    st.success(f"Sua resposta: {resp_user} (Correta!)")
+                else:
+                    st.markdown(f"**{i+1}. {q['pergunta']}**")
+                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
+                st.divider()
+
+            if st.button("Reiniciar / Novo Simulado"):
                 st.session_state.simulado_finalizado = False
                 st.session_state.inicio_simulado = time.time()
+                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
                 st.rerun()
             
     elif modo == "Materiais VIP":
