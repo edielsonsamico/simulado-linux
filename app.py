@@ -315,12 +315,6 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
-    # Botão visível no topo para retornar ao menu principal
-    if st.button("⬅️ Voltar ao Menu Principal (Painel de Navegação)", key=f"btn_topo_voltar_{tipo_key}"):
-        st.session_state.menu_selecionado = "Treino Geral"
-        st.rerun()
-    st.markdown("---")
-
     st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
@@ -541,12 +535,15 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
-    # Gerenciamento de estado para o menu lateral
-    if 'menu_selecionado' not in st.session_state:
-        st.session_state.menu_selecionado = "Treino Geral"
-
     # Controles de Acessibilidade Visual na Barra Lateral
     st.sidebar.markdown("## LinuxPro Academy")
+    st.sidebar.markdown("---")
+    
+    # 🌟 BOTÃO DESTACADO DE VOLTAR / ABRIR MENU NA BARRA LATERAL
+    st.sidebar.markdown("### 🧭 Navegação")
+    if st.sidebar.button("⬅️ Abrir Menu / Voltar ao Início", use_container_width=True):
+        st.sidebar.success("Menu lateral ativo! Use as opções abaixo.")
+
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
     nivel_zoom = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Ampliado (115%)", "Grande (130%)"], label_visibility="collapsed")
@@ -555,7 +552,7 @@ def main():
     aplicar_estilo_acessivel(nivel_zoom, modo_escuro)
 
     st.sidebar.markdown("---")
-    opcoes_menu = [
+    modo = st.sidebar.radio("Painel de Navegação:", [
         "Treino Geral", 
         "Treino por Tópico", 
         "Simulado Linux Essentials (60 Q)",
@@ -566,15 +563,11 @@ def main():
         "Ranking de Notas",
         "Materiais VIP",
         "Créditos"
-    ]
+    ])
 
-    try:
-        idx_atual = opcoes_menu.index(st.session_state.menu_selecionado)
-    except ValueError:
-        idx_atual = 0
-
-    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=idx_atual, key="radio_navegacao")
-    st.session_state.menu_selecionado = modo
+    # 🌟 BOTÃO DE DESTAQUE TAMBÉM NO TOPO DA PÁGINA PRINCIPAL
+    st.markdown("### 👈 Dica: Use o menu lateral à esquerda para navegar entre as seções do site.")
+    st.markdown("---")
 
     if modo == "Treino Geral":
         st.markdown("## Área de Treino Geral")
