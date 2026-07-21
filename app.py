@@ -12,11 +12,13 @@ def gerar_hash_conteudo(pergunta):
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def inferir_resposta_correta(pergunta, opcoes):
-    """Infere ou localiza a resposta correta com base na pergunta e nas opções disponíveis."""
+    """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
     p = pergunta.lower()
-    
-    # Dicionário abrangente cobrindo os tópicos do LPI / Linux Essentials
     termos_chave = {
+        "abriga de forma criptografada as senhas": "/etc/shadow",
+        "centralizar, processar e despachar mensagens": "syslogd",
+        "cotas virtuais": "quota",
+        "pausa a execução": "read",
         "configura o nome da máquina local": "/etc/hostname",
         "display=192.168": "direcionar a saída gráfica",
         "suid": "-perm",
@@ -27,14 +29,12 @@ def inferir_resposta_correta(pergunta, opcoes):
         "máxima criticidade": "emerg",
         "syslog": "emerg",
         "árvore genealógica": "pstree",
-        "variável dita a rota": "display",
         "bibliotecas compartilhadas": "/etc/ld.so.conf",
         "redirecionamento envia a saída padrão": ">>",
         "protocolo de sincronização temporal": "123",
         "ordenada de forma alfabética": "order by",
         "inserção de novos dados": "insert into",
         "cláusula é usada para especificar uma condição": "where",
-        "pausa a execução": "read",
         "proprietário usuário e o grupo": "chown",
         "primeiro processo": "init",
         "diretório padrão o sistema copia": "/etc/skel",
@@ -48,22 +48,11 @@ def inferir_resposta_correta(pergunta, opcoes):
         "variáveis de ambiente que foram exportadas": "export",
         "localiza caminhos": "locate"
     }
-    
-    # 1. Procura correspondência com os termos conhecidos nas opções
     for chave, termo in termos_chave.items():
         if chave in p:
             for op in opcoes:
                 if termo in op.lower():
                     return op
-                    
-    # 2. Se não achar por termos, tenta buscar palavras-chave da pergunta dentro das próprias opções
-    palavras_relevantes = [w for w in p.split() if len(w) > 4 and w not in ['qual', 'quais', 'sobre', 'como', 'para', 'onde']]
-    for op in opcoes:
-        op_lower = op.lower()
-        if any(palavra in op_lower for palavra in palavras_relevantes):
-            return op
-            
-    # 3. Fallback seguro caso nada bata
     return opcoes[0] if opcoes else "Não informada"
 
 def carregar_banco_unico():
@@ -86,20 +75,19 @@ def carregar_banco_unico():
             
             resp_oficial = None
             
-            # Tenta ler de qualquer chave possível de resposta nos dicionários
-            for chave in ['correta', 'resposta', 'gabarito', 'resp', 'answer']:
-                if chave in q and q[chave] is not None:
-                    val = str(q[chave]).strip()
-                    if val.isdigit() and len(opcoes_originais) > 0:
-                        idx = int(val)
-                        if 0 <= idx < len(opcoes_originais):
-                            resp_oficial = str(opcoes_originais[idx]).strip()
-                            break
-                    elif val != "":
-                        resp_oficial = val
-                        break
+            # Captura rigorosa: lê a chave 'correta' como índice da lista de opções originais
+            if 'correta' in q and q['correta'] is not None:
+                val = q['correta']
+                try:
+                    # Tenta converter para inteiro (índice da opção)
+                    idx = int(val)
+                    if 0 <= idx < len(opcoes_originais):
+                        resp_oficial = str(opcoes_originais[idx]).strip()
+                except ValueError:
+                    # Se não for número, assume o texto direto
+                    resp_oficial = str(val).strip()
             
-            # Se a questão veio sem resposta cadastrada no arquivo do tópico, usa a inferência inteligente
+            # Se não houver valor válido na chave 'correta', usa o sistema de inferência técnica
             if not resp_oficial or resp_oficial == "":
                 resp_oficial = inferir_resposta_correta(q['pergunta'], q_copia['opcoes_fixas'])
                 
