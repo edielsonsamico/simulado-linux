@@ -12,9 +12,13 @@ def gerar_hash_conteudo(pergunta):
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
 def inferir_resposta_correta(pergunta, opcoes):
-    """Fallback inteligente para casos onde a questão não traga a resposta preenchida."""
+    """Infere ou localiza a resposta correta com base na pergunta e nas opções disponíveis."""
     p = pergunta.lower()
+    
+    # Dicionário abrangente cobrindo os tópicos do LPI / Linux Essentials
     termos_chave = {
+        "configura o nome da máquina local": "/etc/hostname",
+        "display=192.168": "direcionar a saída gráfica",
         "suid": "-perm",
         "conectividad": "ping",
         "cron.allow": "todos",
@@ -44,11 +48,22 @@ def inferir_resposta_correta(pergunta, opcoes):
         "variáveis de ambiente que foram exportadas": "export",
         "localiza caminhos": "locate"
     }
+    
+    # 1. Procura correspondência com os termos conhecidos nas opções
     for chave, termo in termos_chave.items():
         if chave in p:
             for op in opcoes:
                 if termo in op.lower():
                     return op
+                    
+    # 2. Se não achar por termos, tenta buscar palavras-chave da pergunta dentro das próprias opções
+    palavras_relevantes = [w for w in p.split() if len(w) > 4 and w not in ['qual', 'quais', 'sobre', 'como', 'para', 'onde']]
+    for op in opcoes:
+        op_lower = op.lower()
+        if any(palavra in op_lower for palavra in palavras_relevantes):
+            return op
+            
+    # 3. Fallback seguro caso nada bata
     return opcoes[0] if opcoes else "Não informada"
 
 def carregar_banco_unico():
@@ -71,18 +86,20 @@ def carregar_banco_unico():
             
             resp_oficial = None
             
-            # Pega diretamente o valor armazenado na chave 'correta' do tópico
-            if 'correta' in q and q['correta'] is not None:
-                val = str(q['correta']).strip()
-                # Se por acaso estiver em formato de índice numérico
-                if val.isdigit() and len(opcoes_originais) > 0:
-                    idx = int(val)
-                    if 0 <= idx < len(opcoes_originais):
-                        resp_oficial = str(opcoes_originais[idx]).strip()
-                else:
-                    resp_oficial = val
+            # Tenta ler de qualquer chave possível de resposta nos dicionários
+            for chave in ['correta', 'resposta', 'gabarito', 'resp', 'answer']:
+                if chave in q and q[chave] is not None:
+                    val = str(q[chave]).strip()
+                    if val.isdigit() and len(opcoes_originais) > 0:
+                        idx = int(val)
+                        if 0 <= idx < len(opcoes_originais):
+                            resp_oficial = str(opcoes_originais[idx]).strip()
+                            break
+                    elif val != "":
+                        resp_oficial = val
+                        break
             
-            # Se não encontrou ou veio vazio, utiliza a inferência técnica baseada na pergunta
+            # Se a questão veio sem resposta cadastrada no arquivo do tópico, usa a inferência inteligente
             if not resp_oficial or resp_oficial == "":
                 resp_oficial = inferir_resposta_correta(q['pergunta'], q_copia['opcoes_fixas'])
                 
