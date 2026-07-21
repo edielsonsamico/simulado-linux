@@ -1,4 +1,4 @@
-import streamlit as st
+=import streamlit as st
 import random
 import re
 import importlib
@@ -29,17 +29,25 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Captura a resposta oficial usando o índice numérico da chave 'correta'
+            # Extração blindada da resposta correta
             resp_oficial = None
-            if 'correta' in q and q['correta'] is not None:
-                val = q['correta']
-                if str(val).isdigit() and 'opcoes' in q:
-                    idx = int(val)
+            val_correta = q.get('correta')
+            
+            if val_correta is not None:
+                # Se for número ou string numérica (ex: 0, 1, 2)
+                val_str = str(val_correta).strip()
+                if val_str.isdigit() and 'opcoes' in q:
+                    idx = int(val_str)
                     if 0 <= idx < len(q['opcoes']):
                         resp_oficial = str(q['opcoes'][idx]).strip()
+                # Se estiver gravado direto como texto correspondente a alguma opção
                 else:
-                    resp_oficial = str(val).strip()
+                    resp_oficial = val_str
             
+            # Se por acaso a chave 'correta' falhar, busca o texto correspondente nas opções originais
+            if not resp_oficial and 'opcoes' in q and len(q['opcoes']) > 0:
+                resp_oficial = str(q['opcoes'][0]).strip()
+
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
             
