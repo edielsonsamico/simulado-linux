@@ -29,17 +29,17 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Captura oficial usando a chave 'correta' identificada
+            # Captura a resposta correta de forma inteligente (texto ou índice numérico)
             resp_oficial = None
             if 'correta' in q and q['correta'] is not None:
-                val = str(q['correta']).strip()
-                # Se estiver salvo como índice numérico
-                if val.isdigit() and 'opcoes' in q:
+                val = q['correta']
+                # Se for um número inteiro ou string numérica (ex: 0, 1, 2)
+                if str(val).isdigit() and 'opcoes' in q:
                     idx = int(val)
                     if 0 <= idx < len(q['opcoes']):
                         resp_oficial = str(q['opcoes'][idx]).strip()
                 else:
-                    resp_oficial = val
+                    resp_oficial = str(val).strip()
             
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
