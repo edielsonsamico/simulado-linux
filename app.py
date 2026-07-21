@@ -7,14 +7,21 @@ import string
 import time
 from datetime import datetime
 
-def aplicar_estilo_dinamico(escala_fonte):
+def aplicar_estilo_seguro(tamanho_escolhido):
+    # Mapeia tamanhos seguros que não quebram o layout do Streamlit
+    tamanhos = {
+        "Padrão (100%)": "100%",
+        "Médio (115%)": "115%",
+        "Grande (130%)": "130%"
+    }
+    pct = tamanhos.get(tamanho_escolhido, "100%")
+    
     st.markdown(f"""
         <style>
-        .stApp {{ background-color: #ffffff; color: #111827; font-size: {escala_fonte}%; overflow-x: hidden !important; }}
+        .stApp {{ background-color: #ffffff; color: #111827; font-size: {pct}; overflow-x: hidden !important; }}
         section[data-testid="stSidebar"] {{ background-color: #f8fafc; color: #111827; }}
-        .stRadio label, .stCheckbox label {{ color: #111827 !important; font-size: {escala_fonte}% !important; font-weight: 600; }}
-        .stMarkdown, p, span, div, label {{ font-size: {escala_fonte}% !important; color: #1f2937 !important; }}
-        /* Limita o crescimento dos títulos para não estourar a tela */
+        .stRadio label, .stCheckbox label {{ color: #111827 !important; font-size: {pct} !important; font-weight: 600; }}
+        .stMarkdown, p, span, div, label {{ font-size: {pct} !important; color: #1f2937 !important; }}
         h1 {{ font-size: 1.8rem !important; color: #1d4ed8 !important; }}
         h2 {{ font-size: 1.4rem !important; color: #1d4ed8 !important; }}
         h3 {{ font-size: 1.1rem !important; color: #1d4ed8 !important; }}
@@ -448,10 +455,11 @@ def main():
 
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
-    st.sidebar.markdown("### 👁️ Ajuste de Visão (Acessibilidade)")
-    escala_fonte = st.sidebar.slider("Percentual de Aumento da Fonte", min_value=100, max_value=220, value=100, step=10, help="Escolha o tamanho ideal para o seu conforto visual.")
+    st.sidebar.markdown("### 👁️ Acessibilidade Visual")
+    # Apenas 3 opções fixas seguras para não quebrar o layout
+    tamanho_fonte = st.sidebar.radio("Tamanho do Texto:", ["Padrão (100%)", "Médio (115%)", "Grande (130%)"])
 
-    aplicar_estilo_dinamico(escala_fonte)
+    aplicar_estilo_seguro(tamanho_fonte)
 
     if 'banco_essentials' not in st.session_state:
         st.session_state.banco_essentials = carregar_banco_essentials()
