@@ -535,6 +535,10 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
+    # Inicializa o estado da página ativa
+    if 'menu_atual' not in st.session_state:
+        st.session_state.menu_atual = "Treino Geral"
+
     # Controles de Acessibilidade Visual na Barra Lateral
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
@@ -559,34 +563,31 @@ def main():
         "Créditos"
     ]
 
-    # Gerenciador de estado centralizado para a aba ativa
-    if 'menu_atual' not in st.session_state:
-        st.session_state.menu_atual = "Treino Geral"
-
     st.sidebar.markdown("### 🧭 Painel de Navegação")
-    modo_sidebar = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0, key="radio_sidebar_nav")
+    # Menu lateral sincronizado com o session_state
+    modo_side = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=opcoes_menu.index(st.session_state.menu_atual) if st.session_state.menu_atual in opcoes_menu else 0, key="radio_sidebar_nav")
     
-    if modo_sidebar != st.session_state.menu_atual:
-        st.session_state.menu_atual = modo_sidebar
+    if modo_side != st.session_state.menu_atual:
+        st.session_state.menu_atual = modo_side
         st.rerun()
 
-    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COM BOTÕES REAIS FUNCIONAIS
+    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COM BOTÕES FUNCIONAIS E ÚNICOS
     st.markdown("### 🧭 Menu Principal Rápido")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
-        if st.button("📚 Treino Geral", key="top_btn_treino", use_container_width=True):
+        if st.button("📚 Treino Geral", key="btn_top_treino_geral", use_container_width=True):
             st.session_state.menu_atual = "Treino Geral"
             st.rerun()
     with c2:
-        if st.button("🏆 Ranking", key="top_btn_ranking", use_container_width=True):
+        if st.button("🏆 Ranking", key="btn_top_ranking", use_container_width=True):
             st.session_state.menu_atual = "Ranking de Notas"
             st.rerun()
     with c3:
-        if st.button("🔓 Materiais VIP", key="top_btn_vip", use_container_width=True):
+        if st.button("🔓 Materiais VIP", key="btn_top_materiais_vip", use_container_width=True):
             st.session_state.menu_atual = "Materiais VIP"
             st.rerun()
     with c4:
-        if st.button("ℹ️ Créditos", key="top_btn_cred", use_container_width=True):
+        if st.button("ℹ️ Créditos", key="btn_top_creditos", use_container_width=True):
             st.session_state.menu_atual = "Créditos"
             st.rerun()
     st.markdown("---")
