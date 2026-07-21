@@ -8,7 +8,6 @@ import time
 from datetime import datetime
 
 def aplicar_estilo_acessivel(nivel_zoom):
-    # Dicionário de tamanhos seguros para manter a proporção e o leiaute perfeito
     escala = {
         "Padrão (100%)": "16px",
         "Ampliado (115%)": "19px",
@@ -18,13 +17,12 @@ def aplicar_estilo_acessivel(nivel_zoom):
     
     st.markdown(f"""
         <style>
-        .stApp { background-color: #ffffff; color: #111827; overflow-x: hidden !important; }
-        section[data-testid="stSidebar"] { background-color: #f8fafc; color: #111827; }
-        /* Aplicação controlada da fonte em elementos de texto e questões sem quebrar o layout */
-        .stMarkdown, p, span, label, .stRadio div { font-size: {tamanho_fonte} !important; color: #1f2937 !important; }
-        h1 { color: #1d4ed8 !important; font-size: 1.8rem !important; }
-        h2 { color: #1d4ed8 !important; font-size: 1.4rem !important; }
-        h3 { color: #1d4ed8 !important; font-size: 1.2rem !important; }
+        .stApp {{ background-color: #ffffff; color: #111827; overflow-x: hidden !important; }}
+        section[data-testid="stSidebar"] {{ background-color: #f8fafc; color: #111827; }}
+        .stMarkdown, p, span, label, .stRadio div {{ font-size: {tamanho_fonte} !important; color: #1f2937 !important; }}
+        h1 {{ color: #1d4ed8 !important; font-size: 1.8rem !important; }}
+        h2 {{ color: #1d4ed8 !important; font-size: 1.4rem !important; }}
+        h3 {{ color: #1d4ed8 !important; font-size: 1.2rem !important; }}
         </style>
     """, unsafe_allow_html=True)
 
@@ -98,7 +96,7 @@ def obter_comentario(pergunta, resposta_certa):
     elif "fhs" in p or "usr" in p:
         return "💡 **Comentário Técnico:** Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
     elif "lilo" in p or "syslinux" in p:
-        return "💡 **Comentário Técnico:** O Syslinux é uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
+        return "💡 **Comentário Técnico:** O Syslinux is uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
     elif "pci" in p:
         return "💡 **Comentário Técnico:** O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
     elif "sysvinit" in p or "messages" in p:
@@ -453,7 +451,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 def main():
     st.set_page_config(page_title="LinuxPro Academy | SAMICOIOT", layout="wide")
 
-    # Controles de Acessibilidade Visual na Barra Lateral com 3 opções seguras
+    # Controles de Acessibilidade Visual na Barra Lateral declarados antes de chamar o estilo
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
