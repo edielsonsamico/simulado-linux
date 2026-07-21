@@ -10,7 +10,8 @@ from datetime import datetime
 def aplicar_estilo_dinamico(escala_fonte):
     st.markdown(f"""
         <style>
-        .stApp {{ background-color: #ffffff; color: #111827; font-size: {escala_fonte}%; }}
+        /* Trava o scroll horizontal para evitar o efeito de zoom lateral */
+        .stApp {{ background-color: #ffffff; color: #111827; font-size: {escala_fonte}%; overflow-x: hidden !important; }}
         section[data-testid="stSidebar"] {{ background-color: #f8fafc; color: #111827; }}
         .stRadio label, .stCheckbox label {{ color: #111827 !important; font-size: {escala_fonte}% !important; font-weight: 600; }}
         .stMarkdown, p, span, div, label {{ font-size: {escala_fonte}% !important; color: #1f2937 !important; }}
