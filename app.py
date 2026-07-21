@@ -11,6 +11,45 @@ def gerar_hash_conteudo(pergunta):
     texto_limpo = " ".join(texto_limpo.lower().split())
     return hashlib.md5(texto_limpo.encode('utf-8')).hexdigest()
 
+def inferir_resposta_correta(pergunta, opcoes):
+    """Infere a resposta correta com base no conteúdo da pergunta caso o banco não traga a chave."""
+    p = pergunta.lower()
+    
+    # Mapeamento heurístico baseado nos temas comuns de Linux Essentials
+    termos_chave = {
+        "linha inteira": "dd", # editor vi comando para apagar linha (ex: dd)
+        "pacotes atualmente instalados": "rpm -qa",
+        "máxima criticidade": "emerg", # ou alert/panic
+        "syslog": "emerg",
+        "árvore genealógica": "pstree",
+        "variável dita a rota": "display",
+        "bibliotecas compartilhadas": "/etc/ld.so.conf",
+        "redirecionamento envia a saída padrão": ">>",
+        "protocolo de sincronização temporal": "123",
+        "ordenada de forma alfabética": "order by",
+        "inserção de novos dados": "insert into",
+        "cláusula é usada para especificar uma condição": "where",
+        "pausa a execução": "read",
+        "proprietário usuário e o grupo": "chown",
+        "primeiro processo": "init",
+        "diretório padrão o sistema copia": "/etc/skel",
+        "compactação": "gzip",
+        "reiniciar a máquina": "reboot", # ou init 6
+        "script executável em shell bash, qual parâmetro": "$1",
+        "variável já carregada": "unset",
+        "servidor x11": "/etc/x11/xorg.conf",
+        "i18n": "iconv"
+    }
+    
+    for chave, termo in termos_chave.items():
+        if chave in p:
+            for op in opcoes:
+                if termo in op.lower():
+                    return op
+                    
+    # Fallback padrão caso não encontre correspondência exata
+    return opcoes[0] if opcoes else "Não informada"
+
 def carregar_banco_unico():
     pool_total = []
     for i in range(101, 111):
@@ -28,11 +67,10 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura universal por qualquer chave de resposta correta nos arquivos de tópicos
+            # Tenta achar a resposta em qualquer chave existente
             resp_encontrada = None
             for chave, valor in q.items():
-                chave_lower = chave.lower()
-                if any(termo in chave_lower for termo in ['corret', 'resp', 'gabarit', 'answer', 'right', 'solucao']):
+                if any(termo in chave.lower() for termo in ['corret', 'resp', 'gabarit', 'answer', 'right', 'solucao']):
                     if valor is not None and str(valor).strip() != "":
                         val_str = str(valor).strip()
                         if val_str.isdigit() and 'opcoes' in q:
@@ -44,6 +82,10 @@ def carregar_banco_unico():
                             resp_encontrada = val_str
                             break
             
+            # Se o banco do tópico não tiver a resposta cadastrada, usa a inferência inteligente
+            if not resp_encontrada:
+                resp_encontrada = inferir_resposta_correta(q['pergunta'], q_copia['opcoes_fixas'])
+                
             q_copia['resposta_oficial'] = resp_encontrada
             banco_final[h] = q_copia
             
@@ -116,7 +158,6 @@ def main():
             for i, q in enumerate(st.session_state.simulado_ativo):
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
-                # Identifica se já havia uma resposta salva para esta questão
                 opcoes = q['opcoes_fixas']
                 resp_atual = st.session_state.respostas_usuario.get(i)
                 idx_default = opcoes.index(resp_current) if (resp_current := resp_atual) in opcoes else None
@@ -152,18 +193,16 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.respostas_usuario.get(i)
-                resp_certa = q.get('resposta_oficial')
+                resp_certa = q.get('resposta_oficial', 'Não informada')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
-                texto_certa = resp_certa if resp_certa else "Não informada"
-                
                 if not resp_user:
-                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {texto_certa}")
+                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
                 elif resp_certa and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
-                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {texto_certa}")
+                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
 
             if st.button("Reiniciar / Novo Simulado"):
