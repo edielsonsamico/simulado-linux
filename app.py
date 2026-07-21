@@ -315,6 +315,12 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
+    # Botão visível no topo para retornar ao menu principal
+    if st.button("⬅️ Voltar ao Menu Principal (Painel de Navegação)", key=f"btn_topo_voltar_{tipo_key}"):
+        st.session_state.menu_selecionado = "Treino Geral"
+        st.rerun()
+    st.markdown("---")
+
     st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
@@ -374,7 +380,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         
         st.markdown("---")
         
-        # Botão explícito para abandonar prova
         if st.button("🚪 Abandonar Prova e Voltar", key=f"btn_abandonar_ativo_{tipo_key}"):
             st.session_state[ativo_key] = False
             st.session_state[finalizado_key] = False
@@ -563,7 +568,6 @@ def main():
         "Créditos"
     ]
 
-    # Garante que o índice atual seja válido
     try:
         idx_atual = opcoes_menu.index(st.session_state.menu_selecionado)
     except ValueError:
