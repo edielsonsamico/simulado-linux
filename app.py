@@ -24,7 +24,7 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1, h2, h3 {{ color: #60a5fa !important; }}
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
             .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            .stButton button:hover {{ background-color: #1f2937 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             .custom-link-btn {{
                 display: block;
@@ -559,9 +559,12 @@ def main():
         "Créditos"
     ]
 
-    # 🌟 MENU DE NAVEGAÇÃO PRINCIPAL TAMBÉM EM FORMATO DE SELECTBOX NO TOPO (Garante acesso fácil em qualquer tela)
+    st.sidebar.markdown("### 🧭 Painel de Navegação")
+    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, label_visibility="collapsed")
+
+    # 🌟 MENU DE NAVEGAÇÃO RÁPIDA NO TOPO DA PÁGINA (Funciona perfeitamente e troca de aba instantaneamente)
     st.markdown("### 🧭 Painel de Navegação Rápida")
-    modo = st.selectbox("Escolha a Seção do Sistema:", opcoes_menu, label_visibility="collapsed")
+    modo = st.selectbox("Escolha a Seção do Sistema:", opcoes_menu, index=opcoes_menu.index(modo), label_visibility="collapsed", key="select_topo_navegacao")
     st.markdown("---")
 
     if modo == "Treino Geral":
