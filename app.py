@@ -29,11 +29,22 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Padroniza a chave da resposta correta (aceita 'resposta' ou 'correta')
-            resp = q.get('resposta') or q.get('correta')
-            q_copia['resposta_oficial'] = resp
+            # Varredura ampla para encontrar a resposta correta em qualquer formato do dicionário
+            resp_oficial = None
+            for chave_possivel in ['resposta', 'correta', 'resp', 'gabarito', 'answer']:
+                if chave_possivel in q and q[chave_possivel]:
+                    resp_oficial = str(q[chave_possivel]).strip()
+                    break
             
+            # Se a resposta estiver salva como índice (ex: 0, 1, 2...), converte para o texto correspondente
+            if resp_oficial and resp_oficial.isdigit() and 'opcoes' in q:
+                idx = int(resp_oficial)
+                if 0 <= idx < len(q['opcoes']):
+                    resp_oficial = str(q['opcoes'][idx]).strip()
+
+            q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
+            
     return list(banco_final.values())
 
 # App Principal
@@ -115,7 +126,7 @@ def main():
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resposta_usuario = st.session_state.get(f"ans_{i}")
                 resposta_correta = q.get('resposta_oficial')
-                if resposta_usuario and resposta_correta and (resposta_usuario.strip() == resposta_correta.strip()):
+                if resposta_usuario and resposta_correta and (str(resposta_usuario).strip() == str(resposta_correta).strip()):
                     acertos += 1
             
             nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
@@ -129,7 +140,7 @@ def main():
                 resp_user = st.session_state.get(f"ans_{i}", "Não respondida")
                 resp_certa = q.get('resposta_oficial', 'Não informada no banco')
                 
-                if resp_user == resp_certa and resp_user != "Não respondida":
+                if resp_user and resp_certa and (str(resp_user).strip() == str(resp_certa).strip()):
                     st.markdown(f"**{i+1}. {q['pergunta']}**")
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
