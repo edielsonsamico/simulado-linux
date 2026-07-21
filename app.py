@@ -22,10 +22,11 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             section[data-testid="stSidebar"] {{ background-color: #111827; color: #f3f4f6; }}
             .stMarkdown, p, span, label, .stRadio div, .stCheckbox label {{ font-size: {tamanho_fonte} !important; color: #f3f4f6 !important; }}
             h1, h2, h3 {{ color: #60a5fa !important; }}
-            /* Ajuste de inputs e botões no Modo Escuro */
+            /* Ajuste completo de inputs, botões, links e códigos no Modo Escuro */
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
-            .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; }}
+            .stButton button, a[data-testid="stLinkButton"] {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
+            .stButton button:hover, a[data-testid="stLinkButton"]:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             </style>
         """, unsafe_allow_html=True)
     else:
