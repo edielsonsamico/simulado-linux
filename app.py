@@ -26,7 +26,6 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
             .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
-            /* Estilo customizado para o botão de link no Modo Escuro */
             .custom-link-btn {{
                 display: block;
                 width: 100%;
@@ -56,7 +55,6 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1 {{ color: #1d4ed8 !important; font-size: 1.8rem !important; }}
             h2 {{ color: #1d4ed8 !important; font-size: 1.4rem !important; }}
             h3 {{ color: #1d4ed8 !important; font-size: 1.2rem !important; }}
-            /* Estilo customizado para o botão de link no Modo Claro */
             .custom-link-btn {{
                 display: block;
                 width: 100%;
@@ -143,7 +141,7 @@ def inferir_resposta_correta(pergunta, opcoes):
 def obter_comentario(pergunta, resposta_certa):
     p = pergunta.lower()
     if "swap" in p:
-        return "💡 **Comentário Técnico:** A partição/espaço de swap é utilizada pelo kernel como memória virtual quando a RAM física atinge o limite."
+        return "💡 **Comentário Técnico:** A partição/espaço de swap é utilizada pelo kernel como memória virtual quando a RAM física atinge el limite."
     elif "fhs" in p or "usr" in p:
         return "💡 **Comentário Técnico:** Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
     elif "lilo" in p or "syslinux" in p:
@@ -655,14 +653,12 @@ def main():
             st.info("🔓 **Área de Apoio e Doação Voluntária**\n\nApoie o projeto com qualquer contribuição via Pix e tenha acesso imediato a materiais exclusivos de estudo.")
             
             st.markdown("### Passo 1: Inscreva-se no Canal Oficial")
-            # Substituindo por um link customizado em HTML/Markdown para garantir leitura perfeita em qualquer tema
             st.markdown("""
                 <a href="https://www.youtube.com/@EdielsonSamico?sub_confirmation=1" target="_blank" class="custom-link-btn">
                     👉 INSCREVA-SE NO CANAL DO YOUTUBE
                 </a>
             """, unsafe_allow_html=True)
             
-            # Botão de confirmação para avançar o passo
             st.write("")
             if st.button("Já me inscrevi no canal! Avançar"):
                 st.session_state.clicou_no_cadastro = True
@@ -670,6 +666,11 @@ def main():
                 
             if st.session_state.clicou_no_cadastro:
                 st.markdown("---")
+                # Botão de voltar para dar liberdade ao usuário
+                if st.button("↩️ Voltar / Refazer Passo 1"):
+                    st.session_state.clicou_no_cadastro = False
+                    st.rerun()
+
                 st.markdown("### Passo 2: Contribuição Voluntária via Pix")
                 st.markdown("Faça uma doação/contribuição para a chave Pix abaixo:")
                 st.code("samicoiot@gmail.com", language="text")
