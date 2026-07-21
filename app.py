@@ -149,7 +149,7 @@ def main():
         st.title("🎯 Treino por Tópico")
         topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_questoes)))
         t = st.selectbox("Escolha:", topicos)
-        for q in [q for q in st.session_state.banco_questoes if q.get('topico') == t]:
+        for q in [q for q in st.session_state.banco_questoes if q.get('topico'] == t]:
             st.markdown(f"**{q['pergunta']}**")
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
@@ -158,6 +158,15 @@ def main():
         st.title("⏱️ Simulado LPI (Prova Real 40 Q)")
         TEMPO_OFICIAL = 60 * 60 
         
+        # O botão fica visível, mas desativado (disabled=True) se a prova NÃO estiver finalizada
+        botao_novo_desativado = not st.session_state.simulado_finalizado
+        if st.button("🔄 Sortear Novas Questões (Reiniciar Prova)", disabled=botao_novo_desativado, key="btn_novo_geral"):
+            st.session_state.simulado_finalizado = False
+            st.session_state.inicio_simulado = time.time()
+            st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+            st.session_state.respostas_usuario = {}
+            st.rerun()
+
         if not st.session_state.simulado_finalizado:
             tempo_decorrido = int(time.time() - st.session_state.inicio_simulado)
             tempo_restante = TEMPO_OFICIAL - tempo_decorrido
@@ -219,15 +228,6 @@ def main():
                 st.metric("Tempo de Prova", f"{minutos_usados:02d}:{segundos_usados:02d}")
             
             st.markdown("---")
-            
-            # BOTÃO DE NOVO SIMULADO (Aparece apenas após finalizar a prova)
-            if st.button("🔄 Sortear Novas Questões (Iniciar Novo Simulado)", key="btn_novo_fim"):
-                st.session_state.simulado_finalizado = False
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
-                st.rerun()
-
             st.subheader("📋 Gabarito Detalhado")
             
             for i, q in enumerate(st.session_state.simulado_ativo):
