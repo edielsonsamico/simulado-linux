@@ -220,6 +220,10 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     else:
         st.session_state.erro_finalizacao = None
         st.session_state.tempo_gasto = tempo_decorrido
+        
+        # Libera a trava global de simulado em andamento
+        st.session_state.simulado_em_andamento = None
+
         if tipo_simulado == "essentials":
             st.session_state.finalizado_essentials = True
             st.session_state.nick_salvo_essentials = False
@@ -253,10 +257,26 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
 
+    # VERIFICAÇÃO GLOBAL DE SEGURANÇA: Se já houver OUTRO simulado rodando, bloqueia este
+    if st.session_state.get("simulado_em_andamento") and st.session_state.get("simulado_em_andamento") != tipo_key:
+        outro_ativo = st.session_state.get("simulado_em_andamento")
+        st.warning(f"⚠️ **Atenção:** Você já possui um simulado ativo em andamento (`{outro_ativo.upper()}`). \n\nVocê precisa **finalizar** ou **abandonar/cancelar** a prova atual antes de iniciar um novo simulado em outra categoria!")
+        if st.button("🗑️ Abandonar Prova Atual e Iniciar Esta", key=f"btn_abandonar_{tipo_key}"):
+            st.session_state[f"ativo_{outro_ativo}"] = False
+            st.session_state[f"finalizado_{outro_ativo}"] = True
+            st.session_state.simulado_em_andamento = tipo_key
+            st.session_state[ativo_key] = True
+            st.session_state[inicio_key] = time.time()
+            st.session_state[respostas_key] = {}
+            st.session_state.erro_finalizacao = None
+            st.rerun()
+        return
+
     # 1. TELA DE INICIALIZAÇÃO
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Regras do Simulado Oficial:**\n- {qtd_questoes} Questões de múltipla escolha.\n- Tempo limite: {tempo_minutos} minutos.\n- Obrigatório responder todas as questões.\n- Necessário 50% de acertos para liberar o gabarito e ranking.")
         if st.button("▶️ Iniciar Prova Agora", key=f"btn_iniciar_{tipo_key}"):
+            st.session_state.simulado_em_andamento = tipo_key
             st.session_state[ativo_key] = True
             st.session_state[inicio_key] = time.time()
             st.session_state[respostas_key] = {}
@@ -278,6 +298,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             st.session_state.tempo_gasto = TEMPO_OFICIAL
             st.session_state[finalizado_key] = True
             st.session_state[ativo_key] = False
+            st.session_state.simulado_em_andamento = None
             st.rerun()
         
         st.markdown("---")
@@ -368,6 +389,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         if st.button("🔄 Sortear Novas Questões (Novo Simulado)", key=f"btn_novo_fim_{tipo_key}"):
             st.session_state[finalizado_key] = False
             st.session_state[ativo_key] = False
+            st.session_state.simulado_em_andamento = None
             st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
             st.session_state[respostas_key] = {}
             st.session_state.erro_finalizacao = None
@@ -385,7 +407,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             else:
                 st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
             
-            # Exibe o comentário explicativo detalhado
             comentario = obter_comentario(q['pergunta'], resp_certa)
             st.info(comentario)
             st.divider()
@@ -411,6 +432,7 @@ def main():
         
     if 'tempo_gasto' not in st.session_state: st.session_state.tempo_gasto = 0
     if 'erro_finalizacao' not in st.session_state: st.session_state.erro_finalizacao = None
+    if 'simulado_em_andamento' not in st.session_state: st.session_state.simulado_em_andamento = None
     
     if 'ranking' not in st.session_state:
         st.session_state.ranking = [
@@ -450,13 +472,12 @@ def main():
                 else:
                     st.error(f"Sua resposta: {resp_t} | Correta: {resp_certa}")
                 
-                # Comentário explicativo integrado no Treino Geral
                 st.info(obter_comentario(q['pergunta'], resp_certa))
             st.divider()
 
     elif modo == "Treino por Tópico":
         st.title("🎯 Treino por Tópico (Questões Numeradas e Comentadas)")
-        topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_essentials if 'topico' in q)))
+        topicos = sorted(list(set(q.get('topico', 'Geral Essentials') for q in st.session_state.banco_essentials if 'topico' in q)))
         if not topicos:
             topicos = ["Geral Essentials"]
         t = st.selectbox("Escolha o Tópico:", topicos)
