@@ -29,20 +29,17 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura inteligente de chaves comuns de resposta
+            # Captura oficial usando a chave 'correta' identificada
             resp_oficial = None
-            for chave in ['resposta', 'correta', 'resp', 'gabarito', 'answer', 'right']:
-                if chave in q and q[chave] is not None:
-                    val = str(q[chave]).strip()
-                    # Se for um número (índice da opção), pega o texto correspondente das opções originais
-                    if val.isdigit() and 'opcoes' in q:
-                        idx = int(val)
-                        if 0 <= idx < len(q['opcoes']):
-                            resp_oficial = str(q['opcoes'][idx]).strip()
-                            break
-                    else:
-                        resp_oficial = val
-                        break
+            if 'correta' in q and q['correta'] is not None:
+                val = str(q['correta']).strip()
+                # Se estiver salvo como índice numérico
+                if val.isdigit() and 'opcoes' in q:
+                    idx = int(val)
+                    if 0 <= idx < len(q['opcoes']):
+                        resp_oficial = str(q['opcoes'][idx]).strip()
+                else:
+                    resp_oficial = val
             
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
@@ -128,7 +125,7 @@ def main():
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resposta_usuario = st.session_state.get(f"ans_{i}")
                 resposta_correta = q.get('resposta_oficial')
-                if resposta_usuario and resposta_correta and (str(resposta_usuario).strip() == str(resposta_correta).strip()):
+                if resposta_usuario and resposta_correta and (str(resposta_usuario).strip().lower() == str(resposta_correta).strip().lower()):
                     acertos += 1
             
             nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
@@ -139,15 +136,14 @@ def main():
             st.subheader("📋 Gabarito Detalhado")
             
             for i, q in enumerate(st.session_state.simulado_ativo):
-                resp_user = st.session_state.get(f"ans_{i}", "Não respondida")
-                resp_certa = q.get('resposta_oficial')
+                resp_user = st.session_state.get(f"ans_{i}")
+                resp_certa = q.get('resposta_oficial', 'Não informada')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
-                if not resp_certa:
-                    # Se ainda vier vazio, mostra as chaves do dicionário para sabermos o nome exato
-                    st.warning(f"Sua resposta: {resp_user} | Atenção: Chaves disponíveis no banco: {list(q.keys())}")
-                elif resp_user and str(resp_user).strip() == str(resp_certa).strip():
+                if not resp_user:
+                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
+                elif str(resp_user).strip().lower() == str(resp_certa).strip().lower():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
