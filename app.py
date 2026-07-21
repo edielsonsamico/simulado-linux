@@ -212,10 +212,9 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
             st.session_state.nick_salvo_geral = False
     st.rerun()
 
-def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
+def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
     st.title(f"⏱️ {titulo_pagina}")
     
-    # Estados específicos
     ativo_key = f"ativo_{tipo_key}"
     inicio_key = f"inicio_{tipo_key}"
     finalizado_key = f"finalizado_{tipo_key}"
@@ -225,13 +224,13 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
 
     if ativo_key not in st.session_state: st.session_state[ativo_key] = False
     if finalizado_key not in st.session_state: st.session_state[finalizado_key] = False
-    if simulado_ativo_key not in st.session_state: st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(40, len(banco_questoes_ref)))
+    if simulado_ativo_key not in st.session_state: st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
 
-    # 1. TELA DE INICIALIZAÇÃO (Antes de clicar em Iniciar)
+    # 1. TELA DE INICIALIZAÇÃO
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
-        st.info("📌 **Regras do Simulado Oficial:**\n- 40 Questões de múltipla escolha.\n- Tempo limite: 60 minutos.\n- Obrigatório responder todas as questões.\n- Necessário 50% de acertos para liberar o gabarito e ranking.")
+        st.info(f"📌 **Regras do Simulado Oficial:**\n- {qtd_questoes} Questões de múltipla escolha.\n- Tempo limite: {tempo_minutos} minutos.\n- Obrigatório responder todas as questões.\n- Necessário 50% de acertos para liberar o gabarito e ranking.")
         if st.button("▶️ Iniciar Prova Agora", key=f"btn_iniciar_{tipo_key}"):
             st.session_state[ativo_key] = True
             st.session_state[inicio_key] = time.time()
@@ -240,7 +239,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
             st.rerun()
         return
 
-    TEMPO_OFICIAL = 60 * 60 
+    TEMPO_OFICIAL = tempo_minutos * 60 
 
     # 2. PROVA EM ANDAMENTO
     if st.session_state[ativo_key] and not st.session_state[finalizado_key]:
@@ -269,7 +268,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
                         st.rerun()
                 with c2:
                     if st.button("🔄 Sortear Novas Questões", key=f"btn_sortear_topo_{tipo_key}"):
-                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(40, len(banco_questoes_ref)))
+                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.session_state[inicio_key] = time.time()
@@ -303,7 +302,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
                         st.rerun()
                 with cb2:
                     if st.button("🔄 Sortear Novas Questões", key=f"btn_sortear_base_{tipo_key}"):
-                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(40, len(banco_questoes_ref)))
+                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.session_state[inicio_key] = time.time()
@@ -344,7 +343,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref):
         if st.button("🔄 Sortear Novas Questões (Novo Simulado)", key=f"btn_novo_fim_{tipo_key}"):
             st.session_state[finalizado_key] = False
             st.session_state[ativo_key] = False
-            st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(40, len(banco_questoes_ref)))
+            st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
             st.session_state[respostas_key] = {}
             st.session_state.erro_finalizacao = None
             st.rerun()
@@ -397,11 +396,11 @@ def main():
     modo = st.sidebar.radio("Navegação:", [
         "Treino Geral", 
         "Treino por Tópico", 
-        "Simulado Linux Essentials (40 Q)",
+        "Simulado Linux Essentials (60 Q)",
         "Simulado LPIC-1 (40 Q)",
         "Simulado LPIC-2 (40 Q)",
         "Simulado Misto LPIC-1 + LPIC-2 (40 Q)",
-        "Simulado Geral (Misto 40 Q)",
+        "Simulado Geral (Misto 60 Q)",
         "Ranking de Notas",
         "Materiais VIP",
         "Créditos"
@@ -423,20 +422,20 @@ def main():
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
 
-    elif modo == "Simulado Linux Essentials (40 Q)":
-        renderizar_modulo_simulado("Simulado Linux Essentials (Prova Real 40 Q)", "essentials", st.session_state.banco_essentials)
+    elif modo == "Simulado Linux Essentials (60 Q)":
+        renderizar_modulo_simulado("Simulado Linux Essentials (60 Questões)", "essentials", st.session_state.banco_essentials, qtd_questoes=60, tempo_minutos=60)
 
     elif modo == "Simulado LPIC-1 (40 Q)":
-        renderizar_modulo_simulado("Simulado LPIC-1 (Prova Real Avançada 40 Q)", "lpic1", st.session_state.banco_lpic1)
+        renderizar_modulo_simulado("Simulado LPIC-1 (Prova Real Avançada 40 Q)", "lpic1", st.session_state.banco_lpic1, qtd_questoes=40, tempo_minutos=60)
 
     elif modo == "Simulado LPIC-2 (40 Q)":
-        renderizar_modulo_simulado("Simulado LPIC-2 (Administração de Redes e Servidores)", "lpic2", st.session_state.banco_lpic2)
+        renderizar_modulo_simulado("Simulado LPIC-2 (Administração de Redes e Servidores)", "lpic2", st.session_state.banco_lpic2, qtd_questoes=40, tempo_minutos=60)
 
     elif modo == "Simulado Misto LPIC-1 + LPIC-2 (40 Q)":
-        renderizar_modulo_simulado("Simulado Misto LPIC-1 + LPIC-2 (40 Q)", "misto12", st.session_state.banco_misto12)
+        renderizar_modulo_simulado("Simulado Misto LPIC-1 + LPIC-2 (40 Q)", "misto12", st.session_state.banco_misto12, qtd_questoes=40, tempo_minutos=60)
 
-    elif modo == "Simulado Geral (Misto 40 Q)":
-        renderizar_modulo_simulado("Simulado Geral Misto (Essentials + LPIC-1 + LPIC-2)", "geral", st.session_state.banco_geral)
+    elif modo == "Simulado Geral (Misto 60 Q)":
+        renderizar_modulo_simulado("Simulado Geral Misto (Essentials + LPIC-1 + LPIC-2)", "geral", st.session_state.banco_geral, qtd_questoes=60, tempo_minutos=90)
 
     elif modo == "Ranking de Notas":
         st.title("🏆 Rankings Top 10 por Categoria")
