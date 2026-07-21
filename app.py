@@ -29,22 +29,17 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Varredura total por qualquer chave que contenite dados de resposta
+            # Captura a resposta oficial usando o índice numérico da chave 'correta'
             resp_oficial = None
-            for chave, valor in q.items():
-                chave_lower = chave.lower()
-                if any(termo in chave_lower for termo in ['resp', 'corret', 'gabarit', 'answer', 'right', 'solucao']):
-                    if valor is not None and str(valor).strip() != "":
-                        val_str = str(valor).strip()
-                        # Se for um índice numérico
-                        if val_str.isdigit() and 'opcoes' in q:
-                            idx = int(val_str)
-                            if 0 <= idx < len(q['opcoes']):
-                                resp_oficial = str(q['opcoes'][idx]).strip()
-                                break
-                        else:
-                            resp_oficial = val_str
-                            break
+            if 'correta' in q and q['correta'] is not None:
+                val = q['correta']
+                # Se for um número inteiro ou string numérica indicando o índice (ex: 0, 1, 2, 3)
+                if str(val).isdigit() and 'opcoes' in q:
+                    idx = int(val)
+                    if 0 <= idx < len(q['opcoes']):
+                        resp_oficial = str(q['opcoes'][idx]).strip()
+                else:
+                    resp_oficial = str(val).strip()
             
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
@@ -88,7 +83,7 @@ def main():
         st.title("🎯 Treino por Tópico")
         topicos = sorted(list(set(q.get('topico', 'Geral') for q in st.session_state.banco_questoes)))
         t = st.selectbox("Escolha:", topicos)
-        for q in [q for q in st.session_state.banco_questoes if q.get('topico') == t]:
+        for q in [q for q in st.session_state.banco_questoes if q.get('topico'] == t]:
             st.markdown(f"**{q['pergunta']}**")
             st.radio(f"radio_{q['id']}_{t}", q['opcoes_fixas'], index=None, label_visibility="collapsed")
             st.divider()
@@ -142,14 +137,13 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.get(f"ans_{i}")
-                resp_certa = q.get('resposta_oficial')
+                resp_certa = q.get('resposta_oficial', 'Não informada')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
-                if not resp_certa:
-                    # Exibe todas as chaves reais da questão para tirarmos a prova de vez
-                    st.warning(f"Sua resposta: {resp_user} | DEBUG - Chaves reais no arquivo: {list(q.keys())}")
-                elif resp_user and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
+                if not resp_user:
+                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
+                elif resp_certa and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
