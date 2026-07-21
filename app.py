@@ -5,7 +5,50 @@ import importlib
 import hashlib
 import string
 import time
+import json
+import os
 from datetime import datetime
+
+ARQUIVO_RANKING = "ranking_global.json"
+ARQUIVO_DESEMPENHO = "desempenho_usuario.json"
+
+def carregar_ranking_persistido():
+    if os.path.exists(ARQUIVO_RANKING):
+        try:
+            with open(ARQUIVO_RANKING, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return [
+        {"nick": "Samico", "nota": 9.5, "tempo": 1200, "prova": "Essentials", "data_hora": "21/07/2026 às 08:30"},
+        {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450, "prova": "LPIC-1", "data_hora": "21/07/2026 às 08:40"},
+        {"nick": "SysAdmin", "nota": 8.2, "tempo": 1300, "prova": "LPIC-2", "data_hora": "21/07/2026 às 08:50"},
+        {"nick": "DevOpsBR", "nota": 7.9, "tempo": 1350, "prova": "Misto 1+2", "data_hora": "21/07/2026 às 08:55"},
+        {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
+    ]
+
+def salvar_ranking_persistido(ranking):
+    try:
+        with open(ARQUIVO_RANKING, "w", encoding="utf-8") as f:
+            json.dump(ranking, f, ensure_ascii=False, indent=4)
+    except:
+        pass
+
+def carregar_historico_desempenho():
+    if os.path.exists(ARQUIVO_DESEMPENHO):
+        try:
+            with open(ARQUIVO_DESEMPENHO, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except:
+            pass
+    return {"acertos_total": 0, "erros_total": 0, "topicos": {}}
+
+def salvar_historico_desempenho(dados):
+    try:
+        with open(ARQUIVO_DESEMPENHO, "w", encoding="utf-8") as f:
+            json.dump(dados, f, ensure_ascii=False, indent=4)
+    except:
+        pass
 
 def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
     escala = {
@@ -149,7 +192,7 @@ def obter_comentario(pergunta, resposta_certa):
     elif "pci" in p:
         return "💡 **Comentário Técnico:** O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
     elif "sysvinit" in p or "messages" in p:
-        return "💡 **Comentário Técnico:** O arquivo `/var/log/messages` centraliza logs gerais do sistema e de eventos do syslog no padrão tradicional."
+        return "💡 **Comentário Técnico:** O arquivo `/var/log/messages` centraliza logs gerais do sistema e de eventos do syslog o padrão tradicional."
     elif "módulos" in p or "lsmod" in p:
         return "💡 **Comentário Técnico:** O comando `lsmod` lê o arquivo `/proc/modules` para exibir os módulos de driver atualmente carregados na memória."
     else:
@@ -162,7 +205,8 @@ def carregar_banco_essentials():
             modulo = importlib.import_module(f"topico{i}")
             if hasattr(modulo, f"POOL_{i}"):
                 pool_total.extend(getattr(modulo, f"POOL_{i}"))
-        except: continue
+        except ImportError:
+            pass # Módulo opcional não encontrado
     
     banco_final = {}
     for q in pool_total:
@@ -282,11 +326,25 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
         return
 
     acertos = 0
+    desempenho_user = carregar_historico_desempenho()
+    
     for i, q in enumerate(banco_ativo):
         resp_user = respostas_ativas.get(i)
         resp_certa = q.get('resposta_oficial')
+        topico_q = q.get('topico', 'Geral')
+        
+        if topico_q not in desempenho_user["topicos"]:
+            desempenho_user["topicos"][topico_q] = {"acertos": 0, "erros": 0}
+
         if verificar_acerto(resp_user, resp_certa):
             acertos += 1
+            desempenho_user["acertos_total"] += 1
+            desempenho_user["topicos"][topico_q]["acertos"] += 1
+        else:
+            desempenho_user["erros_total"] += 1
+            desempenho_user["topicos"][topico_q]["erros"] += 1
+            
+    salvar_historico_desempenho(desempenho_user)
             
     minimo_acertos = total_questoes * 0.5
     
@@ -323,12 +381,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     respostas_key = f"respostas_{tipo_key}"
     simulado_ativo_key = f"simulado_{tipo_key}"
     nick_salvo_key = f"nick_salvo_{tipo_key}"
+    revisao_key = f"revisao_{tipo_key}"
 
     if ativo_key not in st.session_state: st.session_state[ativo_key] = False
     if finalizado_key not in st.session_state: st.session_state[finalizado_key] = False
     if simulado_ativo_key not in st.session_state: st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
+    if revisao_key not in st.session_state: st.session_state[revisao_key] = False
 
     if st.session_state.get("simulado_em_andamento") and st.session_state.get("simulado_em_andamento") != tipo_key:
         outro_ativo = st.session_state.get("simulado_em_andamento")
@@ -347,13 +407,35 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
         st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha.\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
         
-        if st.button("Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
-            st.session_state.simulado_em_andamento = tipo_key
-            st.session_state[ativo_key] = True
-            st.session_state[inicio_key] = time.time()
-            st.session_state[respostas_key] = {}
-            st.session_state.erro_finalizacao = None
-            st.rerun()
+        col_i1, col_i2 = st.columns(2)
+        with col_i1:
+            if st.button("Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
+                st.session_state.simulado_em_andamento = tipo_key
+                st.session_state[ativo_key] = True
+                st.session_state[inicio_key] = time.time()
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.session_state[revisao_key] = False
+                st.rerun()
+        with col_i2:
+            if st.session_state.get(revisao_key):
+                if st.button("🔄 Refazer Apenas Questões Erradas", key=f"btn_modo_revisao_{tipo_key}"):
+                    # Filtra apenas as questões erradas da tentativa anterior
+                    erradas = []
+                    for idx_q, q_item in enumerate(st.session_state[simulado_ativo_key]):
+                        resp_u = st.session_state[respostas_key].get(idx_q)
+                        if not verificar_acerto(resp_u, q_item.get('resposta_oficial')):
+                            erradas.append(q_item)
+                    if erradas:
+                        st.session_state[simulado_ativo_key] = erradas
+                        st.session_state[respostas_key] = {}
+                        st.session_state[ativo_key] = True
+                        st.session_state[inicio_key] = time.time()
+                        st.session_state.simulado_em_andamento = tipo_key
+                        st.session_state[revisao_key] = False
+                        st.rerun()
+                    else:
+                        st.success("🎉 Parabéns! Você não teve questões erradas para revisar nesta prova.")
         return
 
     TEMPO_OFICIAL = tempo_minutos * 60 
@@ -363,7 +445,12 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         tempo_restante = TEMPO_OFICIAL - tempo_decorrido
         
         if tempo_restante > 0:
-            st.metric("Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
+            min_r = tempo_restante // 60
+            seg_r = tempo_restante % 60
+            if tempo_restante < 300: # Menos de 5 minutos (Alerta visual)
+                st.error(f"⚠️ **ATENÇÃO - TEMPO CRÍTICO RESTANTE:** {min_r:02d}:{seg_r:02d}")
+            else:
+                st.metric("Tempo Restante", f"{min_r:02d}:{seg_r:02d}")
         else:
             st.error("TEMPO ESGOTADO!")
             st.session_state.tempo_gasto = TEMPO_OFICIAL
@@ -411,7 +498,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             resp_atual = st.session_state[respostas_key].get(i)
             idx_default = opcoes.index(resp_atual) if resp_atual in opcoes else None
             
-            # 🌟 ALTERNATIVAS NUMERADAS/FORMATADAS COM LETRAS (A, B, C, D)
             opcoes_formatadas = [f"{chr(65+j)}) {op}" for j, op in enumerate(opcoes)]
             mapa_opcoes = {f"{chr(65+j)}) {op}": op for j, op in enumerate(opcoes)}
             
@@ -450,13 +536,17 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
             
     elif st.session_state[finalizado_key]:
         st.success(f"{titulo_pagina} Concluído com Sucesso!")
+        st.session_state[revisao_key] = True
         
         acertos = 0
+        tem_erros = False
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
             resp_user = st.session_state[respostas_key].get(i)
             resp_certa = q.get('resposta_oficial')
             if verificar_acerto(resp_user, resp_certa):
                 acertos += 1
+            else:
+                tem_erros = True
                     
         total_questoes = len(st.session_state[simulado_ativo_key])
         nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
@@ -472,14 +562,16 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                 st.write("")
                 st.write("")
                 if st.button("Salvar no Ranking", key=f"btn_salvar_{tipo_key}"):
-                    st.session_state.ranking.append({
+                    novo_registro = {
                         "nick": nick_input, 
                         "nota": nota_final, 
                         "tempo": st.session_state.tempo_gasto, 
                         "prova": tag_ranking,
                         "data_hora": datetime.now().strftime("%d/%m/%Y às %H:%M")
-                    })
+                    }
+                    st.session_state.ranking.append(novo_registro)
                     st.session_state.ranking = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))
+                    salvar_ranking_persistido(st.session_state.ranking)
                     st.session_state[nick_salvo_key] = True
                     st.rerun()
         else:
@@ -488,14 +580,33 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         st.markdown("---")
         st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
         
-        if st.button("Sortear Novo Exame", key=f"btn_novo_fim_{tipo_key}"):
-            st.session_state[finalizado_key] = False
-            st.session_state[ativo_key] = False
-            st.session_state.simulado_em_andamento = None
-            st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
-            st.session_state[respostas_key] = {}
-            st.session_state.erro_finalizacao = None
-            st.rerun()
+        col_b_f1, col_b_f2 = st.columns(2)
+        with col_b_f1:
+            if st.button("Sortear Novo Exame Completo", key=f"btn_novo_fim_{tipo_key}"):
+                st.session_state[finalizado_key] = False
+                st.session_state[ativo_key] = False
+                st.session_state.simulado_em_andamento = None
+                st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+                st.session_state[respostas_key] = {}
+                st.session_state.erro_finalizacao = None
+                st.session_state[revisao_key] = False
+                st.rerun()
+        with col_b_f2:
+            if tem_erros:
+                if st.button("🔄 Refazer Apenas Questões Erradas", key=f"btn_refazer_erros_{tipo_key}"):
+                    erradas = []
+                    for idx_q, q_item in enumerate(st.session_state[simulado_ativo_key]):
+                        resp_u = st.session_state[respostas_key].get(idx_q)
+                        if not verificar_acerto(resp_u, q_item.get('resposta_oficial')):
+                            erradas.append(q_item)
+                    st.session_state[simulado_ativo_key] = erradas
+                    st.session_state[respostas_key] = {}
+                    st.session_state[ativo_key] = True
+                    st.session_state[inicio_key] = time.time()
+                    st.session_state[simulado_em_andamento] = tipo_key
+                    st.session_state[finalizado_key] = False
+                    st.session_state[revisao_key] = False
+                    st.rerun()
 
         st.markdown("### Gabarito Analítico com Comentários Técnicos")
         for i, q in enumerate(st.session_state[simulado_ativo_key]):
@@ -538,13 +649,7 @@ def main():
     if 'simulado_em_andamento' not in st.session_state: st.session_state.simulado_em_andamento = None
     
     if 'ranking' not in st.session_state:
-        st.session_state.ranking = [
-            {"nick": "Samico", "nota": 9.5, "tempo": 1200, "prova": "Essentials", "data_hora": "21/07/2026 às 08:30"},
-            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450, "prova": "LPIC-1", "data_hora": "21/07/2026 às 08:40"},
-            {"nick": "SysAdmin", "nota": 8.2, "tempo": 1300, "prova": "LPIC-2", "data_hora": "21/07/2026 às 08:50"},
-            {"nick": "DevOpsBR", "nota": 7.9, "tempo": 1350, "prova": "Misto 1+2", "data_hora": "21/07/2026 às 08:55"},
-            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
-        ]
+        st.session_state.ranking = carregar_ranking_persistido()
 
     # Inicializa o estado do menu
     if 'menu_ativo' not in st.session_state:
@@ -558,19 +663,6 @@ def main():
     modo_escuro = st.sidebar.checkbox("🌙 Ativar Tela Escura (Modo Noturno)", key="dark_sb")
 
     aplicar_estilo_acessivel(nivel_zoom, modo_escuro)
-
-    opcoes_menu = [
-        "Treino Geral", 
-        "Treino por Tópico", 
-        "Simulado Linux Essentials (60 Q)",
-        "Simulado LPIC-1 (40 Q)",
-        "Simulado LPIC-2 (40 Q)",
-        "Simulado Misto LPIC-1 + LPIC-2 (40 Q)",
-        "Simulado Geral (Misto 60 Q)",
-        "Ranking de Notas",
-        "Materiais VIP",
-        "Créditos"
-    ]
 
     # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COMPLETO E FUNCIONAL EM DUAS LINHAS DE BOTÕES
     st.markdown("### 🧭 Painel de Navegação Rápida")
@@ -597,7 +689,7 @@ def main():
             st.session_state.menu_ativo = "Simulado LPIC-2 (40 Q)"
             st.rerun()
 
-    col_n6, col_n7, col_n8, col_n9, col_n10 = st.columns(5)
+    col_n6, col_n7, col_n8, col_n9, col_n10, col_n11 = st.columns(6)
     with col_n6:
         if st.button("🔥 Misto 1+2", use_container_width=True, key="top_sm"):
             st.session_state.menu_ativo = "Simulado Misto LPIC-1 + LPIC-2 (40 Q)"
@@ -607,14 +699,18 @@ def main():
             st.session_state.menu_ativo = "Simulado Geral (Misto 60 Q)"
             st.rerun()
     with col_n8:
+        if st.button("📊 Desempenho", use_container_width=True, key="top_desempenho"):
+            st.session_state.menu_ativo = "Meu Desempenho"
+            st.rerun()
+    with col_n9:
         if st.button("🏆 Ranking", use_container_width=True, key="top_rk"):
             st.session_state.menu_ativo = "Ranking de Notas"
             st.rerun()
-    with col_n9:
+    with col_n10:
         if st.button("🔓 Materiais VIP", use_container_width=True, key="top_vip"):
             st.session_state.menu_ativo = "Materiais VIP"
             st.rerun()
-    with col_n10:
+    with col_n11:
         if st.button("ℹ️ Créditos", use_container_width=True, key="top_cred"):
             st.session_state.menu_ativo = "Créditos"
             st.rerun()
@@ -641,7 +737,6 @@ def main():
                 if verificar_acerto(resp_escolhida, resp_certa):
                     st.success(f"Resposta Correta: {resp_t}")
                 else:
-                    # Acha a letra da resposta certa para exibir bonitinho
                     letra_certa = ""
                     for k_f, v_o in mapa_fmt.items():
                         if verificar_acerto(v_o, resp_certa):
@@ -699,6 +794,41 @@ def main():
 
     elif modo == "Simulado Geral (Misto 60 Q)":
         renderizar_modulo_simulado("Simulado Geral Misto (Essentials + LPIC-1 + LPIC-2)", "geral", st.session_state.banco_geral, qtd_questoes=60, tempo_minutos=90)
+
+    elif modo == "Meu Desempenho":
+        st.markdown("## 📊 Painel de Desempenho por Tópico")
+        st.markdown("Acompanhe o seu progresso, total de acertos/erros e quais áreas exigem mais foco.")
+        st.markdown("---")
+        
+        dados_desempenho = carregar_historico_desempenho()
+        tot_acertos = dados_desempenho["acertos_total"]
+        tot_erros = dados_desempenho["erros_total"]
+        total_resp = tot_acertos + tot_erros
+        
+        col_d1, col_d2, col_d3 = st.columns(3)
+        with col_d1:
+            st.metric("Total de Questões Respondidas", total_resp)
+        with col_d2:
+            st.metric("Acertos Totais", tot_acertos)
+        with col_d3:
+            taxa_geral = (tot_acertos / total_resp * 100) if total_resp > 0 else 0
+            st.metric("Taxa de Aproveitamento Geral", f"{taxa_geral:.1f}%")
+            
+        st.markdown("---")
+        st.markdown("### Desempenho Detalhado por Tópico")
+        if not dados_desempenho["topicos"]:
+            st.info("📌 Nenhum dado de desempenho registrado ainda. Complete alguns treinos ou simulados para gerar as estatísticas!")
+        else:
+            for top, valores in dados_desempenho["topicos"].items():
+                ac_t = valores["acertos"]
+                er_t = valores["erros"]
+                tot_t = ac_t + er_t
+                pct_t = (ac_t / tot_t * 100) if tot_t > 0 else 0
+                
+                st.markdown(f"**{top}**")
+                st.progress(pct_t / 100.0)
+                st.caption(f"Acertos: {ac_t} | Erros: {er_t} | Aproveitamento: {pct_t:.1f}%")
+                st.divider()
 
     elif modo == "Ranking de Notas":
         st.markdown("## Hall da Fama - Rankings Globais")
