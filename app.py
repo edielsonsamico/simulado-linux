@@ -315,12 +315,6 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
     st.rerun()
 
 def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
-    # Botão de retorno direto no topo
-    if st.button("⬅️ Voltar ao Início / Menu Principal", key=f"btn_voltar_topo_{tipo_key}"):
-        st.session_state.menu_selecionado = "Treino Geral"
-        st.rerun()
-    st.markdown("---")
-
     st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
@@ -541,10 +535,6 @@ def main():
             {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100, "prova": "Geral", "data_hora": "21/07/2026 às 09:00"}
         ]
 
-    # Gerenciamento de estado para o menu lateral
-    if 'menu_selecionado' not in st.session_state:
-        st.session_state.menu_selecionado = "Treino Geral"
-
     # Controles de Acessibilidade Visual na Barra Lateral
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
@@ -569,22 +559,9 @@ def main():
         "Créditos"
     ]
 
-    try:
-        idx_atual = opcoes_menu.index(st.session_state.menu_selecionado)
-    except ValueError:
-        idx_atual = 0
-
-    modo = st.sidebar.radio("Painel de Navegação:", opcoes_menu, index=idx_atual, key="radio_navegacao")
-    st.session_state.menu_selecionado = modo
-
-    # 🌟 BARRA DE NAVEGAÇÃO SUPERIOR COM BOTÃO DE VOLTAR EXPLICITO
-    col_nav1, col_nav2 = st.columns([1, 4])
-    with col_nav1:
-        if st.button("⬅️ Voltar ao Início"):
-            st.session_state.menu_selecionado = "Treino Geral"
-            st.rerun()
-    with col_nav2:
-        st.markdown("💡 *Dica: Se a barra lateral estiver oculta, clique na seta `>>` no canto superior esquerdo ou use o botão ao lado.*")
+    # 🌟 MENU DE NAVEGAÇÃO PRINCIPAL TAMBÉM EM FORMATO DE SELECTBOX NO TOPO (Garante acesso fácil em qualquer tela)
+    st.markdown("### 🧭 Painel de Navegação Rápida")
+    modo = st.selectbox("Escolha a Seção do Sistema:", opcoes_menu, label_visibility="collapsed")
     st.markdown("---")
 
     if modo == "Treino Geral":
