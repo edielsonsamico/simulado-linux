@@ -173,14 +173,32 @@ def main():
                 st.divider()
             
             if st.button("Finalizar Simulado e Ver Gabarito"):
-                # Validação: Verifica se o usuário respondeu pelo menos uma questão
-                if len(st.session_state.respostas_usuario) == 0:
-                    st.warning("⚠️ Você não respondeu nenhuma questão! Por favor, marque ao menos uma resposta antes de finalizar o simulado.")
+                total_questoes = len(st.session_state.simulado_ativo)
+                questoes_respondidas = len(st.session_state.respostas_usuario)
+                
+                # Validação 1: Precisa responder pelo menos 50% das questões (20 de 40)
+                minimo_respondido = total_questoes * 0.5
+                if questoes_respondidas < minimo_respondido:
+                    st.warning(f"⚠️ Você respondeu apenas {questoes_respondidas} de {total_questoes} questões. É necessário responder pelo menos 50% ({int(minimo_respondido)} questões) para finalizar o simulado e liberar o gabarito.")
                 else:
-                    st.session_state.simulado_finalizado = True
-                    st.rerun()
+                    # Calcula prévia dos acertos para verificar a barreira de 40% (nota 4.0 ou 16 acertos)
+                    acertos_previa = 0
+                    for i, q in enumerate(st.session_state.simulado_ativo):
+                        resp_user = st.session_state.respostas_usuario.get(i)
+                        resp_certa = q.get('resposta_oficial')
+                        if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
+                            acertos_previa += 1
+                    
+                    minimo_acertos = total_questoes * 0.4 # 40% de acertos totais
+                    
+                    # Validação 2: Precisa atingir pelo menos 40% de acertos para ver o gabarito detalhado
+                    if acertos_previa < minimo_acertos:
+                        st.error(f"❌ Você acertou {acertos_previa} de {total_questoes} questões ({ (acertos_previa/total_questoes)*100:.1f}%). Para liberar a visualização do gabarito completo e do treinamento, é necessário atingir no mínimo 40% de acertos ({int(minimo_acertos)} acertos). Revise o conteúdo e tente novamente!")
+                    else:
+                        st.session_state.simulado_finalizado = True
+                        st.rerun()
         else:
-            st.success("🏁 Simulado Finalizado com Sucesso!")
+            st.success("🏁 Simulado Finalizado com Sucesso! Desempenho aprovado para liberação do gabarito.")
             
             acertos = 0
             total_questoes = len(st.session_state.simulado_ativo)
