@@ -667,8 +667,17 @@ def main():
                 st.rerun()
     
     elif modo == "Créditos":
-        st.markdown("## Sobre a Plataforma")
+        st.markdown("## Sobre a Plataforma & Apoio")
         st.markdown("**LinuxPro Academy** — Desenvolvido por Edielson Samico.")
+        st.markdown("---")
+        st.markdown("### 💡 Apoie este Projeto")
+        st.markdown("Se esta plataforma te ajudou nos estudos para as certificações Linux e você deseja apoiar a manutenção e criação de novos conteúdos gratuitos para o canal, considere fazer uma contribuição voluntária via Pix:")
+        st.code("samicoiot@gmail.com", language="text")
+        
+        qr_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=samicoiot@gmail.com"
+        st.image(qr_url, width=180)
+        
+        st.markdown("🚀 *Muito obrigado por fazer parte da nossa comunidade!*")
 
 if __name__ == "__main__":
     main()
