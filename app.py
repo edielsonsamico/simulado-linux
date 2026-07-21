@@ -29,18 +29,36 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Captura a resposta correta de forma inteligente (texto ou índice numérico)
+            # Varredura exaustiva por qualquer chave de resposta correta existente no dicionário
             resp_oficial = None
-            if 'correta' in q and q['correta'] is not None:
-                val = q['correta']
-                # Se for um número inteiro ou string numérica (ex: 0, 1, 2)
-                if str(val).isdigit() and 'opcoes' in q:
-                    idx = int(val)
-                    if 0 <= idx < len(q['opcoes']):
-                        resp_oficial = str(q['opcoes'][idx]).strip()
-                else:
-                    resp_oficial = str(val).strip()
+            chaves_possiveis = ['resposta', 'correta', 'resp', 'gabarito', 'answer', 'right', 'opcao_correta', 'alternativa_correta']
             
+            for chave in chaves_possiveis:
+                if chave in q and q[chave] is not None and str(q[chave]).strip() != "":
+                    val = str(q[chave]).strip()
+                    
+                    # Se estiver salvo como índice numérico (ex: 0, 1, 2)
+                    if val.isdigit() and 'opcoes' in q:
+                        idx = int(val)
+                        if 0 <= idx < len(q['opcoes']):
+                            resp_oficial = str(q['opcoes'][idx]).strip()
+                            break
+                    
+                    # Se estiver salvo como letra (ex: 'a', 'b', 'c', 'd')
+                    elif val.lower() in ['a', 'b', 'c', 'd', 'e'] and 'opcoes' in q:
+                        mapa_letras = {'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4}
+                        idx = mapa_letras.get(val.lower())
+                        if idx is not None and idx < len(q['opcoes']):
+                            resp_oficial = str(q['opcoes'][idx]).strip()
+                            break
+                    else:
+                        resp_oficial = val
+                        break
+            
+            # Fallback de segurança caso a chave venha vazia: assume o primeiro elemento das opções originais se houver
+            if not resp_oficial and 'opcoes' in q and len(q['opcoes']) > 0:
+                resp_oficial = str(q['opcoes'][0]).strip()
+
             q_copia['resposta_oficial'] = resp_oficial
             banco_final[h] = q_copia
             
