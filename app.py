@@ -1,10 +1,3 @@
-Você tem toda razão, Samico! Me desculpe por ter removido o recurso. Vamos unir o melhor dos dois mundos: mantemos o leiaute limpo e organizado na barra lateral, mas recolocamos o **Modo de Acessibilidade / Pessoas Especiais** sem quebrar o layout da página.
-
-Desta vez, criei um seletor compacto na barra lateral com **3 níveis seguros de tamanho de texto** (*Padrão*, *Texto Ampliado* e *Texto Grande*) que redimensionam a área de estudo e as questões de forma fluida e sem estourar o espaço lateral.
-
-Substitua todo o conteúdo do seu `app.py` por este código definitivo:
-
-```python
 import streamlit as st
 import random
 import re
@@ -630,5 +623,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-```
