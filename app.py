@@ -15,6 +15,9 @@ def inferir_resposta_correta(pergunta, opcoes):
     """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
     p = pergunta.lower()
     termos_chave = {
+        "protocolo de sincronização temporal ntp": "porta udp 123",
+        "hotplug": "permitir conexão e desconexão de dispositivos com a máquina ligada",
+        "desligar ou reiniciar a máquina de forma segura, permitindo alertar": "shutdown",
         "variável especial de shell identificada pelo token": "código de retorno",
         "opção do comando ls deve ser usada": "-l",
         "abriga de forma criptografada as senhas": "/etc/shadow",
@@ -108,16 +111,28 @@ def main():
         st.session_state.senha_aleatoria = ''.join(random.choices(string.digits, k=6))
     if 'inicio_simulado' not in st.session_state:
         st.session_state.inicio_simulado = time.time()
+    if 'tempo_gasto' not in st.session_state:
+        st.session_state.tempo_gasto = 0
     if 'simulado_finalizado' not in st.session_state:
         st.session_state.simulado_finalizado = False
     if 'respostas_usuario' not in st.session_state:
         st.session_state.respostas_usuario = {}
+    if 'ranking' not in st.session_state:
+        # Mock inicial com nick e tempo em segundos (quanto menor o tempo, melhor no empate)
+        st.session_state.ranking = [
+            {"nick": "Samico", "nota": 9.5, "tempo": 1200},
+            {"nick": "LinuxPro", "nota": 8.8, "tempo": 1450},
+            {"nick": "TerminalMaster", "nota": 8.0, "tempo": 1100},
+            {"nick": "SysAdmin", "nota": 7.5, "tempo": 1600},
+            {"nick": "DevOpsBR", "nota": 7.0, "tempo": 1800}
+        ]
 
     st.sidebar.title("Ambiente SAMICOIOT")
     modo = st.sidebar.radio("Navegação:", [
         "Treino Geral", 
         "Treino por Tópico", 
         "Simulado LPI Oficial",
+        "Ranking de Notas",
         "Materiais VIP",
         "Créditos"
     ])
@@ -150,14 +165,23 @@ def main():
                 st.metric("⏱️ Tempo Restante", f"{tempo_restante // 60:02d}:{tempo_restante % 60:02d}")
             else:
                 st.error("TEMPO ESGOTADO!")
+                st.session_state.tempo_gasto = TEMPO_OFICIAL
                 st.session_state.simulado_finalizado = True
                 st.rerun()
             
-            if st.button("Gerar novo simulado"):
-                st.session_state.inicio_simulado = time.time()
-                st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
-                st.session_state.respostas_usuario = {}
-                st.rerun()
+            # BOTÃO TOPO
+            col_b1, col_b2 = st.columns([1, 4])
+            with col_b1:
+                if st.button("Gerar novo simulado", key="btn_novo_topo"):
+                    st.session_state.inicio_simulado = time.time()
+                    st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
+                    st.session_state.respostas_usuario = {}
+                    st.rerun()
+            with col_b2:
+                if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_topo"):
+                    processar_finalizacao(tempo_decorrido)
+
+            st.markdown("---")
                 
             for i, q in enumerate(st.session_state.simulado_ativo):
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
@@ -171,32 +195,11 @@ def main():
                     st.session_state.respostas_usuario[i] = escolha
                     
                 st.divider()
-            
-            if st.button("Finalizar Simulado e Ver Gabarito"):
-                total_questoes = len(st.session_state.simulado_ativo)
-                questoes_respondidas = len(st.session_state.respostas_usuario)
+
+            # BOTÃO BASE
+            if st.button("Finalizar Simulado e Ver Gabarito", key="btn_fin_base"):
+                processar_finalizacao(tempo_decorrido)
                 
-                # Validação 1: Precisa responder pelo menos 50% das questões (20 de 40)
-                minimo_respondido = total_questoes * 0.5
-                if questoes_respondidas < minimo_respondido:
-                    st.warning(f"⚠️ Você respondeu apenas {questoes_respondidas} de {total_questoes} questões. É necessário responder pelo menos 50% ({int(minimo_respondido)} questões) para finalizar o simulado e liberar o gabarito.")
-                else:
-                    # Calcula prévia dos acertos para verificar a barreira de 40% (nota 4.0 ou 16 acertos)
-                    acertos_previa = 0
-                    for i, q in enumerate(st.session_state.simulado_ativo):
-                        resp_user = st.session_state.respostas_usuario.get(i)
-                        resp_certa = q.get('resposta_oficial')
-                        if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
-                            acertos_previa += 1
-                    
-                    minimo_acertos = total_questoes * 0.4 # 40% de acertos totais
-                    
-                    # Validação 2: Precisa atingir pelo menos 40% de acertos para ver o gabarito detalhado
-                    if acertos_previa < minimo_acertos:
-                        st.error(f"❌ Você acertou {acertos_previa} de {total_questoes} questões ({ (acertos_previa/total_questoes)*100:.1f}%). Para liberar a visualização do gabarito completo e do treinamento, é necessário atingir no mínimo 40% de acertos ({int(minimo_acertos)} acertos). Revise o conteúdo e tente novamente!")
-                    else:
-                        st.session_state.simulado_finalizado = True
-                        st.rerun()
         else:
             st.success("🏁 Simulado Finalizado com Sucesso! Desempenho aprovado para liberação do gabarito.")
             
@@ -211,8 +214,14 @@ def main():
                     acertos += 1
             
             nota_final = (acertos / total_questoes) * 10 if total_questoes > 0 else 0
+            minutos_usados = st.session_state.tempo_gasto // 60
+            segundos_usados = st.session_state.tempo_gasto % 60
             
-            st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
+            col_m1, col_m2 = st.columns(2)
+            with col_m1:
+                st.metric("Sua Nota Final", f"{nota_final:.1f} / 10.0", f"{acertos} de {total_questoes} corretas")
+            with col_m2:
+                st.metric("Tempo de Prova", f"{minutos_usados:02d}:{segundos_usados:02d}")
             
             st.markdown("---")
             st.subheader("📋 Gabarito Detalhado")
@@ -231,12 +240,33 @@ def main():
                     st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
                 st.divider()
 
-            if st.button("Reiniciar / Novo Simulado"):
+            if st.button("Reiniciar / Novo Simulado", key="btn_reiniciar_fim"):
                 st.session_state.simulado_finalizado = False
                 st.session_state.inicio_simulado = time.time()
                 st.session_state.simulado_ativo = random.sample(st.session_state.banco_questoes, k=min(40, len(st.session_state.banco_questoes)))
                 st.session_state.respostas_usuario = {}
                 st.rerun()
+
+    elif modo == "Ranking de Notas":
+        st.title("🏆 Ranking Top 10 (Maiores Notas & Agilidade)")
+        st.markdown("Os 10 melhores operadores do ambiente. *Critério de desempate: menor tempo de conclusão.*")
+        
+        # Ordena por nota (maior primeiro) e tempo (menor primeiro para desempate)
+        ranking_ordenado = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))[:10]
+        
+        for idx, item in enumerate(ranking_ordenado, 1):
+            m_t = item['tempo'] // 60
+            s_t = item['tempo'] % 60
+            tempo_str = f"{m_t:02d}:{s_t:02d}"
+            
+            if idx == 1:
+                st.markdown(f"🥇 **1º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+            elif idx == 2:
+                st.markdown(f"🥈 **2º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+            elif idx == 3:
+                st.markdown(f"🥉 **3º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
+            else:
+                st.markdown(f"▫️ **{idx}º Lugar:** `{item['nick']}` — **Nota: {item['nota']:.1f}** *(Tempo: {tempo_str})*")
             
     elif modo == "Materiais VIP":
         st.title("🎁 Materiais VIP")
@@ -260,6 +290,34 @@ def main():
     
     elif modo == "Créditos":
         st.write("Desenvolvido por Edielson Samico.")
+
+def processar_finalizacao(tempo_decorrido):
+    total_questoes = len(st.session_state.simulado_ativo)
+    
+    # Conta os acertos
+    acertos = 0
+    for i, q in enumerate(st.session_state.simulado_ativo):
+        resp_user = st.session_state.respostas_usuario.get(i)
+        resp_certa = q.get('resposta_oficial')
+        if resp_user and resp_certa and (str(resp_user).strip().lower() == str(resp_certa).strip().lower()):
+            acertos += 1
+            
+    minimo_acertos = total_questoes * 0.5  # Regra de 50% de acertos (20 de 40)
+    
+    if acertos < minimo_acertos:
+        st.error(f"❌ Você acertou {acertos} de {total_questoes} questões ({ (acertos/total_questoes)*100:.1f}%). Para liberar a visualização do gabarito e entrar no ranking Top 10, é necessário atingir no mínimo 50% de acertos ({int(minimo_acertos)} acertos). Continue treinando!")
+    else:
+        st.session_state.tempo_gasto = tempo_decorrido
+        st.session_state.simulado_finalizado = True
+        
+        # Captura o nickname para o ranking
+        nick_input = st.text_input("🎉 Parabéns! Meta de 50% atingida. Digite seu Nickname para o Ranking:", value="Samico")
+        if st.button("Confirmar e Salvar no Ranking"):
+            nota_final_val = (acertos / total_questoes) * 10
+            st.session_state.ranking.append({"nick": nick_input, "nota": nota_final_val, "tempo": tempo_decorrido})
+            # Ordena por nota decrescente e tempo crescente (desempate por quem foi mais rápido)
+            st.session_state.ranking = sorted(st.session_state.ranking, key=lambda x: (-x['nota'], x['tempo']))
+            st.rerun()
 
 if __name__ == "__main__":
     main()
