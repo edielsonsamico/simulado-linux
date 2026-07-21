@@ -15,6 +15,8 @@ def inferir_resposta_correta(pergunta, opcoes):
     """Fallback inteligente para associar a resposta caso a chave do tópico venha vazia."""
     p = pergunta.lower()
     termos_chave = {
+        "variável especial de shell identificada pelo token": "código de retorno",
+        "opção do comando ls deve ser usada": "-l",
         "abriga de forma criptografada as senhas": "/etc/shadow",
         "centralizar, processar e despachar mensagens": "syslogd",
         "cotas virtuais": "quota",
@@ -46,7 +48,8 @@ def inferir_resposta_correta(pergunta, opcoes):
         "arquivo regular existe": "-f",
         "detalhes como modelo de fábrica": "/proc/cpuinfo",
         "variáveis de ambiente que foram exportadas": "export",
-        "localiza caminhos": "locate"
+        "localiza caminhos": "locate",
+        "intervalo regulamentado": "-20 a +19"
     }
     for chave, termo in termos_chave.items():
         if chave in p:
@@ -75,19 +78,15 @@ def carregar_banco_unico():
             
             resp_oficial = None
             
-            # Captura rigorosa: lê a chave 'correta' como índice da lista de opções originais
             if 'correta' in q and q['correta'] is not None:
                 val = q['correta']
                 try:
-                    # Tenta converter para inteiro (índice da opção)
                     idx = int(val)
                     if 0 <= idx < len(opcoes_originais):
                         resp_oficial = str(opcoes_originais[idx]).strip()
                 except ValueError:
-                    # Se não for número, assume o texto direto
                     resp_oficial = str(val).strip()
             
-            # Se não houver valor válido na chave 'correta', usa o sistema de inferência técnica
             if not resp_oficial or resp_oficial == "":
                 resp_oficial = inferir_resposta_correta(q['pergunta'], q_copia['opcoes_fixas'])
                 
@@ -174,8 +173,12 @@ def main():
                 st.divider()
             
             if st.button("Finalizar Simulado e Ver Gabarito"):
-                st.session_state.simulado_finalizado = True
-                st.rerun()
+                # Validação: Verifica se o usuário respondeu pelo menos uma questão
+                if len(st.session_state.respostas_usuario) == 0:
+                    st.warning("⚠️ Você não respondeu nenhuma questão! Por favor, marque ao menos uma resposta antes de finalizar o simulado.")
+                else:
+                    st.session_state.simulado_finalizado = True
+                    st.rerun()
         else:
             st.success("🏁 Simulado Finalizado com Sucesso!")
             
