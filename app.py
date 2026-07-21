@@ -6,7 +6,6 @@ import hashlib
 import string
 import time
 
-# Função de Limpeza de Questões
 def gerar_hash_conteudo(pergunta):
     texto_limpo = re.sub(r'^(quest[ãa]o.*?\d+|q\d+|\d+)\s*[\.\:\-]?\s*', '', pergunta.strip(), flags=re.IGNORECASE)
     texto_limpo = " ".join(texto_limpo.lower().split())
@@ -29,28 +28,28 @@ def carregar_banco_unico():
             q_copia['opcoes_fixas'] = q.get('opcoes', []).copy()
             random.shuffle(q_copia['opcoes_fixas'])
             
-            # Extração blindada da resposta correta a partir da chave 'correta'
-            resp_oficial = None
-            val_correta = q.get('correta')
+            # Varredura universal por qualquer chave de resposta nos arquivos de tópicos
+            resp_encontrada = None
+            for chave, valor in q.items():
+                chave_lower = chave.lower()
+                if any(termo in chave_lower for termo in ['corret', 'resp', 'gabarit', 'answer', 'right', 'solucao']):
+                    if valor is not None and str(valor).strip() != "":
+                        val_str = str(valor).strip()
+                        # Se for um índice numérico correspondente às opções
+                        if val_str.isdigit() and 'opcoes' in q:
+                            idx = int(val_str)
+                            if 0 <= idx < len(q['opcoes']):
+                                resp_encontrada = str(q['opcoes'][idx]).strip()
+                                break
+                        else:
+                            resp_encontrada = val_str
+                            break
             
-            if val_correta is not None:
-                val_str = str(val_correta).strip()
-                if val_str.isdigit() and 'opcoes' in q:
-                    idx = int(val_str)
-                    if 0 <= idx < len(q['opcoes']):
-                        resp_oficial = str(q['opcoes'][idx]).strip()
-                else:
-                    resp_oficial = val_str
-            
-            if not resp_oficial and 'opcoes' in q and len(q['opcoes']) > 0:
-                resp_oficial = str(q['opcoes'][0]).strip()
-
-            q_copia['resposta_oficial'] = resp_oficial
+            q_copia['resposta_oficial'] = resp_encontrada
             banco_final[h] = q_copia
             
     return list(banco_final.values())
 
-# App Principal
 def main():
     st.set_page_config(page_title="Ambiente SAMICOIOT", layout="wide")
 
@@ -141,16 +140,18 @@ def main():
             
             for i, q in enumerate(st.session_state.simulado_ativo):
                 resp_user = st.session_state.get(f"ans_{i}")
-                resp_certa = q.get('resposta_oficial', 'Não informada')
+                resp_certa = q.get('resposta_oficial')
                 
                 st.markdown(f"**{i+1}. {q['pergunta']}**")
                 
+                texto_certa = resp_certa if resp_certa else "Não informada"
+                
                 if not resp_user:
-                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {resp_certa}")
+                    st.warning(f"Sua resposta: Não respondida | Resposta Correta: {texto_certa}")
                 elif resp_certa and str(resp_user).strip().lower() == str(resp_certa).strip().lower():
                     st.success(f"Sua resposta: {resp_user} (Correta!)")
                 else:
-                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {resp_certa}")
+                    st.error(f"Sua resposta: {resp_user} | Resposta Correta: {texto_certa}")
                 st.divider()
 
             if st.button("Reiniciar / Novo Simulado"):
