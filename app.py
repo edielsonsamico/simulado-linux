@@ -67,7 +67,7 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1, h2, h3 {{ color: #60a5fa !important; }}
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
             .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover {{ background-color: #1f2937 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             .custom-link-btn {{
                 display: block;
@@ -188,7 +188,7 @@ def obter_comentario(pergunta, resposta_certa):
     elif "fhs" in p or "usr" in p:
         return "💡 **Comentário Técnico:** Segundo o FHS (Filesystem Hierarchy Standard), o diretório `/usr` armazena dados secundários, utilitários e aplicativos executáveis."
     elif "lilo" in p or "syslinux" in p:
-        return "💡 **Comentário Técnico:** O Syslinux é uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
+        return "💡 **Comentário Técnico:** O Syslinux is uma família de carregadores de boot leves frequentemente usados para mídias removíveis e sistemas alternativos."
     elif "pci" in p:
         return "💡 **Comentário Técnico:** O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
     elif "sysvinit" in p or "messages" in p:
@@ -941,14 +941,41 @@ def main():
             if st.button("Gerar Chave de Teste (Admin)"):
                 st.info(f"Chave gerada para teste: **{st.session_state.senha_aleatoria}**")
         else:
-            st.success("🎉 **Bem-vindo à Área VIP Corporativa!** Acesso total liberado.")
-            materiais = {
-                "Apostila Master Linux Completa": "Apostila_Premium_de_Certificacao.pdf", 
-                "Guia Definitivo LPIC-1 Terminal": "LPIC-1_Terminal_2026.pdf",
-                "Banco de Questões Comentadas Avançadas": "Banco_Questoes_VIP.pdf"
-            }
-            for n, l in materiais.items(): 
-                st.markdown(f"- 📥 [{n}]({l})")
+            st.success("🎉 **Bem-vindo à Área VIP Corporativa!** Acesso total liberado com downloads diretos.")
+            
+            # 🌟 LINKS DE DOWNLOAD DOS PDFs REAIS DO PROJETO
+            pdf1_path = "Apostila Premium de Certificação Linux LPIC-1.pdf"
+            pdf2_path = "LPIC-1_Terminal_2026.pdf"
+
+            st.markdown("### 📥 Seus Materiais Exclusivos:")
+            
+            col_d1, col_d2 = st.columns(2)
+            
+            with col_d1:
+                if os.path.exists(pdf1_path):
+                    with open(pdf1_path, "rb") as f1:
+                        st.download_button(
+                            label="📥 Baixar Apostila LPIC-1 (PDF)",
+                            data=f1,
+                            file_name="Apostila_Premium_de_Certificacao_Linux_LPIC-1.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                else:
+                    st.warning("⚠️ Arquivo 'Apostila Premium de Certificação Linux LPIC-1.pdf' não encontrado no diretório.")
+
+            with col_d2:
+                if os.path.exists(pdf2_path):
+                    with open(pdf2_path, "rb") as f2:
+                        st.download_button(
+                            label="📥 Baixar Guia LPIC-1 Terminal (PDF)",
+                            data=f2,
+                            file_name="LPIC-1_Terminal_2026.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                else:
+                    st.warning("⚠️ Arquivo 'LPIC-1_Terminal_2026.pdf' não encontrado no diretório.")
                 
             st.markdown("---")
             if st.button("Encerrar Sessão VIP"):
