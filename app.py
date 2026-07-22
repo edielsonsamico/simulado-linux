@@ -67,7 +67,7 @@ def aplicar_estilo_acessivel(nivel_zoom, modo_escuro):
             h1, h2, h3 {{ color: #60a5fa !important; }}
             input, .stTextInput input {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #374151 !important; }}
             .stButton button {{ background-color: #1f2937 !important; color: #ffffff !important; border: 1px solid #4b5563 !important; }}
-            .stButton button:hover {{ background-color: #374151 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
+            .stButton button:hover {{ background-color: #1f2937 !important; border-color: #60a5fa !important; color: #60a5fa !important; }}
             code, pre, .stCodeBlock {{ background-color: #1f2937 !important; color: #60a5fa !important; border: 1px solid #374151 !important; }}
             .custom-link-btn {{
                 display: block;
@@ -236,7 +236,7 @@ def carregar_banco_essentials():
     return list(banco_final.values())
 
 def carregar_banco_lpic1():
-    topicos_avancados = [
+    topicos_unicos_lpic1 = [
         ("Gerenciamento de Boot GRUB2", "Qual arquivo de configuração principal do GRUB2 é gerado automaticamente e não deve ser editado manualmente?", ["/boot/grub2/grub.cfg", "/etc/default/grub", "/etc/grub.d/40_custom", "/boot/grub/menu.lst"], "/boot/grub2/grub.cfg"),
         ("LVM Logical Volume Manager", "Qual comando é utilizado para expandir um volume lógico (Logical Volume) e o seu sistema de arquivos ext4 simultaneamente em uma única operação?", ["lvextend -r", "lvresize -f", "vgextend", "resize2fs"], "lvextend -r"),
         ("Gerenciamento de Processos", "Qual comando exibe os processos em execução em formato de árvore hierárquica?", ["pstree", "top", "ps aux", "htop"], "pstree"),
@@ -251,73 +251,65 @@ def carregar_banco_lpic1():
         ("Gerenciamento de Serviços Systemd", "Qual comando do systemctl recarrega as configurações dos arquivos de unidades sem reiniciar os serviços ativos?", ["systemctl daemon-reload", "systemctl reload-all", "systemctl refresh", "systemctl update"], "systemctl daemon-reload"),
         ("Permissões Especiais SUID/SGID", "Qual valor numérico representa o bit SUID na representação octal de permissões estendidas?", ["4", "2", "1", "8"], "4"),
         ("Manipulação de Texto Awk/Sed", "Qual comando substitui globalmente a palavra 'erro' por 'alerta' em um arquivo de texto?", ["sed 's/erro/g' arquivo", "awk '{sub(/erro/alerta)}'", "sed -i 's/erro/alerta/g' arquivo", "tr 'erro' 'alerta'"], "sed -i 's/erro/alerta/g' arquivo"),
-        ("Gerenciamento de Rede Netplan/NetworkManager", "Qual ferramenta moderna de gerenciamento de rede baseada em YAML é padrão no Ubuntu Server?", ["netplan", "ifupdown", "network-scripts", "wpa_supplicant"], "netplan")
+        ("Gerenciamento de Rede Netplan", "Qual ferramenta moderna de gerenciamento de rede baseada em YAML é padrão no Ubuntu Server?", ["netplan", "ifupdown", "network-scripts", "wpa_supplicant"], "netplan"),
+        ("Kernel Modules Modprobe", "Qual comando é utilizado para carregar um módulo de kernel juntamente com suas dependências automáticas?", ["modprobe", "insmod", "rmmod", "depmod"], "modprobe"),
+        ("Espaço em Disco DF e DU", "Qual comando exibe o espaço em disco utilizado detalhado por diretórios e arquivos individuais?", ["du", "df", "fdisk", "lsblk"], "du"),
+        ("Gerenciamento de Usuários", "Qual arquivo armazena as informações de expiração de senha e políticas de envelhecimento de contas de usuário?", ["/etc/login.defs", "/etc/passwd", "/etc/shadow", "/etc/security/"], "/etc/login.defs"),
+        ("Compilação de Softwares Make", "Qual etapa do processo de compilação a partir do código-fonte é responsável por verificar dependências e criar o Makefile?", ["./configure", "make", "make install", "gcc -c"], "./configure"),
+        ("Encaminhamento de IP Kernel", "Qual arquivo no diretório /proc habilita temporariamente o encaminhamento de pacotes IPv4 no kernel?", ["/proc/sys/net/ipv4/ip_forward", "/proc/sys/kernel/hostname", "/proc/cpuinfo", "/proc/meminfo"], "/proc/sys/net/ipv4/ip_forward")
     ]
     
-    banco_unico = {}
-    # Gera variações robustas e únicas para atingir 40 questões reais sem duplicidade
-    contador = 1
-    while len(banco_unico) < 40:
-        for top, pergunta_base, ops, resp in topicos_avancados:
-            if len(banco_unico) >= 40:
-                break
-            # Cria variações inteligentes no enunciado para garantir hash único
-            variante_pergunta = f"{pergunta_base} (Ref. LPIC-1 #{contador})"
-            h = gerar_hash_conteudo(variante_pergunta)
-            if h not in banco_unico:
-                ops_copia = ops.copy()
-                random.shuffle(ops_copia)
-                banco_unico[h] = {
-                    "id": f"lpic1_{contador}",
-                    "topico": top,
-                    "pergunta": variante_pergunta,
-                    "opcoes": ops,
-                    "opcoes_fixas": ops_copia,
-                    "resposta_oficial": resp
-                }
-                contador += 1
-    return list(banco_unico.values())
+    banco_final = []
+    for idx, (top, pergunta, ops, resp) in enumerate(topicos_unicos_lpic1, 1):
+        ops_copia = ops.copy()
+        random.shuffle(ops_copia)
+        banco_final.append({
+            "id": f"lpic1_{idx}",
+            "topico": top,
+            "pergunta": pergunta,
+            "opcoes": ops,
+            "opcoes_fixas": ops_copia,
+            "resposta_oficial": resp
+        })
+    return banco_final
 
 def carregar_banco_lpic2():
-    topicos_lpic2 = [
+    topicos_unicos_lpic2 = [
         ("DNS BIND Avançado", "Qual arquivo de zona do DNS contém os registros de mapeamento reverso de endereços IP para nomes de domínio (PTR)?", ["db.127.0.0", "named.conf", "resolv.conf", "hosts.allow"], "db.127.0.0"),
         ("Servidor Web Apache/Nginx", "Qual diretiva do Apache httpd é utilizada para configurar hosts virtuais baseados em nome (Name-based Virtual Hosts)?", ["<VirtualHost>", "<ServerName>", "<Directory>", "<HostConfig>"], "<VirtualHost>"),
         ("Armazenamento iSCSI e NFS", "Qual daemon no servidor Linux gerencia as exportações de arquivos compartilhados via protocolo NFS?", ["nfs-kernel-server (nfsd)", "smbd", "vsftpd", "bind9"], "nfs-kernel-server (nfsd)"),
-        ("Segurança e Firewall iptables/nftables", "Qual tabela do iptables é responsável por realizar operações de NAT (Network Address Translation)?", ["nat", "filter", "mangle", "raw"], "nat"),
+        ("Segurança e Firewall iptables", "Qual tabela do iptables é responsável por realizar operações de NAT (Network Address Translation)?", ["nat", "filter", "mangle", "raw"], "nat"),
         ("Servidor LDAP OpenLDAP", "Qual utilitário de linha de comando é utilizado no OpenLDAP para consultar e pesquisar entradas no diretório de forma estruturada?", ["ldapsearch", "ldapadd", "slapd", "getent"], "ldapsearch"),
-        ("Servidor de E-mail Postfix/Dovecot", "Qual porta padrão é utilizada pelo protocolo IMAPS (IMAP seguro sobre TLS/SSL)?", ["993", "143", "25", "465"], "993"),
+        ("Servidor de E-mail Postfix", "Qual porta padrão é utilizada pelo protocolo IMAPS (IMAP seguro sobre TLS/SSL)?", ["993", "143", "25", "465"], "993"),
         ("Autenticação PAM e Kerberos", "Qual arquivo principal gerencia a configuração dos módulos de autenticação plugáveis (PAM) para os serviços do sistema?", ["/etc/pam.conf", "/etc/security/limits.conf", "/etc/passwd", "/etc/login.defs"], "/etc/pam.conf"),
         ("Monitoramento de Rede SNMP", "Qual comando do pacote net-snmp é utilizado para consultar variáveis e dados de agentes SNMP remotos?", ["snmpwalk", "snmpd", "tcpdump", "nmap"], "snmpwalk"),
-        ("Roteamento Avançado e Tunelamento", "Qual utilitário avançado de rede substituiu o antigo comando 'route' nas distribuições modernas do Linux?", ["ip", "ifconfig", "arp", "route"], "ip"),
+        ("Roteamento Avançado", "Qual utilitário avançado de rede substituiu o antigo comando 'route' nas distribuições modernas do Linux?", ["ip", "ifconfig", "arp", "route"], "ip"),
         ("Planejamento e Desempenho", "Qual ferramenta interativa de monitoramento de desempenho exibe estatísticas de CPU, memória e E/S em tempo real?", ["sar / sysstat", "free", "uptime", "uname"], "sar / sysstat"),
         ("Alta Disponibilidade Cluster", "Qual ferramenta padrão do Linux é amplamente utilizada para gerenciamento de recursos de cluster de alta disponibilidade?", ["Pacemaker", "Heartbeat", "Keepalived", "DRBD"], "Pacemaker"),
         ("Sincronização Rsync e Backup", "Qual parâmetro do rsync preserva todas as permissões, propriedade, timestamps e links simbólicos durante a cópia?", ["-a (archive)", "-r (recursive)", "-v (verbose)", "-z (compress)"], "-a (archive)"),
         ("Servidor DHCP ISC", "Qual arquivo armazena as concessões ativas de endereços IP atribuídos pelo servidor DHCP no Linux?", ["/var/lib/dhcp/dhcpd.leases", "/etc/dhcp/dhcpd.conf", "/var/log/dhcp.log", "/etc/resolv.conf"], "/var/lib/dhcp/dhcpd.leases"),
         ("Certificados SSL/TLS OpenSSL", "Qual comando do OpenSSL exibe os detalhes de um certificado digital no formato X.509 em texto plano?", ["openssl x509 -in cert.crt -text -noout", "openssl rsa -in cert.key", "openssl verify cert.crt", "openssl ciphers"], "openssl x509 -in cert.crt -text -noout"),
-        ("Balanceamento de Carga HAProxy", "Qual seção do arquivo de configuração do HAProxy define os parâmetros globais e de segurança do processo?", ["global", "defaults", "frontend", "backend"], "global")
+        ("Balanceamento de Carga HAProxy", "Qual seção do arquivo de configuração do HAProxy define os parâmetros globais e de segurança do processo?", ["global", "defaults", "frontend", "backend"], "global"),
+        ("Kernel Sysctl Avançado", "Qual comando carrega imediatamente as configurações de parâmetros do kernel definidas no arquivo /etc/sysctl.conf?", ["sysctl -p", "sysctl --reload", "kernel-config update", "sysctl --apply"], "sysctl -p"),
+        ("Servidor NTP Chrony", "Qual comando exibe o status de sincronização temporal e as fontes ativas no daemon Chrony?", ["chronyc sources", "ntpdate -q", "timedatectl status", "chrony-stat"], "chronyc sources"),
+        ("Armazenamento iSCSI Initiator", "Qual utilitário é utilizado para descobrir e realizar o login em alvos iSCSI (Target) remotos no Linux?", ["iscsiadm", "targetcli", "fdisk", "parted"], "iscsiadm"),
+        ("Firewall Avançado NFTables", "Qual comando exibe todas as regras ativas do subsistema moderno nftables em formato estruturado?", ["nft list ruleset", "iptables -L", "nft show", "ufw status"], "nft list ruleset"),
+        ("Servidor de Nomes BIND rndc", "Qual utilitário de controle é utilizado para administrar o servidor DNS BIND em execução sem precisar reiniciá-lo?", ["rndc", "named-checkconf", "bind-ctl", "dnssec-keygen"], "rndc")
     ]
     
-    banco_unico = {}
-    contador = 1
-    while len(banco_unico) < 40:
-        for top, pergunta_base, ops, resp in topicos_lpic2:
-            if len(banco_unico) >= 40:
-                break
-            variante_pergunta = f"{pergunta_base} (Ref. LPIC-2 #{contador})"
-            h = gerar_hash_conteudo(variante_pergunta)
-            if h not in banco_unico:
-                ops_copia = ops.copy()
-                random.shuffle(ops_copia)
-                banco_unico[h] = {
-                    "id": f"lpic2_{contador}",
-                    "topico": top,
-                    "pergunta": variante_pergunta,
-                    "opcoes": ops,
-                    "opcoes_fixas": ops_copia,
-                    "resposta_oficial": resp
-                }
-                contador += 1
-    return list(banco_unico.values())
+    banco_final = []
+    for idx, (top, pergunta, ops, resp) in enumerate(topicos_unicos_lpic2, 1):
+        ops_copia = ops.copy()
+        random.shuffle(ops_copia)
+        banco_final.append({
+            "id": f"lpic2_{idx}",
+            "topico": top,
+            "pergunta": pergunta,
+            "opcoes": ops,
+            "opcoes_fixas": ops_copia,
+            "resposta_oficial": resp
+        })
+    return banco_final
 
 def verificar_acerto(resp_user, resp_certa):
     if resp_user is None or resp_certa is None:
@@ -398,7 +390,7 @@ def processar_finalizacao(tipo_simulado, tempo_decorrido):
             st.session_state.nick_salvo_geral = False
     st.rerun()
 
-def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=40, tempo_minutos=60):
+def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_questoes=20, tempo_minutos=60):
     st.markdown(f"## {titulo_pagina}")
     
     ativo_key = f"ativo_{tipo_key}"
@@ -412,7 +404,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
     if ativo_key not in st.session_state: st.session_state[ativo_key] = False
     if finalizado_key not in st.session_state: st.session_state[finalizado_key] = False
     if simulado_ativo_key not in st.session_state: 
-        # Garante sorteio estrito sem duplicatas por hash
         unicas = {}
         for q in banco_questoes_ref:
             unicas[gerar_hash_conteudo(q['pergunta'])] = q
@@ -438,7 +429,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         return
 
     if not st.session_state[ativo_key] and not st.session_state[finalizado_key]:
-        st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha.\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
+        st.info(f"📌 **Diretrizes do Exame Oficial:**\n- **{qtd_questoes}** Questões de múltipla escolha únicas (sem repetição).\n- **{tempo_minutos} minutos** de tempo limite estrito.\n- Obrigatório responder **todas** as questões.\n- Nota mínima de corte: **50%** para liberação do gabarito e certificação no ranking.")
         
         col_i1, col_i2 = st.columns(2)
         with col_i1:
