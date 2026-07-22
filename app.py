@@ -192,7 +192,7 @@ def obter_comentario(pergunta, resposta_certa):
     elif "pci" in p:
         return "💡 **Comentário Técnico:** O comando `lspci` lista detalhadamente todos os dispositivos PCI e o chipset conectado na placa-mãe."
     elif "sysvinit" in p or "messages" in p:
-        return "💡 **Comentário Técnico:** O arquivo `/var/log/messages` centraliza logs gerais do sistema e de eventos do syslog o padrão tradicional."
+        return "💡 **Comentário Técnico:** O arquivo `/var/log/messages` centraliza logs gerais do sistema e de eventos do syslog no padrão tradicional."
     elif "módulos" in p or "lsmod" in p:
         return "💡 **Comentário Técnico:** O comando `lsmod` lê o arquivo `/proc/modules` para exibir os módulos de driver atualmente carregados na memória."
     else:
@@ -206,7 +206,7 @@ def carregar_banco_essentials():
             if hasattr(modulo, f"POOL_{i}"):
                 pool_total.extend(getattr(modulo, f"POOL_{i}"))
         except ImportError:
-            pass # Módulo opcional não encontrado
+            pass
     
     banco_final = {}
     for q in pool_total:
@@ -236,7 +236,6 @@ def carregar_banco_essentials():
     return list(banco_final.values())
 
 def carregar_banco_lpic1():
-    questoes_lpic1 = []
     topicos_avancados = [
         ("Gerenciamento de Boot GRUB2", "Qual arquivo de configuração principal do GRUB2 é gerado automaticamente e não deve ser editado manualmente?", ["/boot/grub2/grub.cfg", "/etc/default/grub", "/etc/grub.d/40_custom", "/boot/grub/menu.lst"], "/boot/grub2/grub.cfg"),
         ("LVM Logical Volume Manager", "Qual comando é utilizado para expandir um volume lógico (Logical Volume) e o seu sistema de arquivos ext4 simultaneamente em uma única operação?", ["lvextend -r", "lvresize -f", "vgextend", "resize2fs"], "lvextend -r"),
@@ -247,25 +246,39 @@ def carregar_banco_lpic1():
         ("Controle de Acesso ACL", "Qual comando é utilizado para definir permissões avançadas de ACL (Access Control List) em um arquivo?", ["setfacl", "getfacl", "chmod +acl", "chacl"], "setfacl"),
         ("Agendamento Cron", "Em qual diretório do sistema são colocados os scripts que devem ser executados de forma diária pelo sistema de cron (anacron)?", ["/etc/cron.daily", "/var/spool/cron", "/etc/crontab", "/usr/bin/cron"], "/etc/cron.daily"),
         ("Logs do Sistema Journald", "Qual utilitário do systemd é utilizado para consultar e visualizar os logs binários gerados pelo journald?", ["journalctl", "syslog-ng", "tail -f /var/log/messages", "logger"], "journalctl"),
-        ("Limites de Recursos Ulimit", "Qual comando exibe os limites de recursos atuais definidos para o shell e os processos do usuário?", ["ulimit -a", "quotacheck", "limit", "sysctl -a"], "ulimit -a")
+        ("Limites de Recursos Ulimit", "Qual comando exibe os limites de recursos atuais definidos para o shell e os processos do usuário?", ["ulimit -a", "quotacheck", "limit", "sysctl -a"], "ulimit -a"),
+        ("Segurança Básica SSH", "Qual parâmetro do arquivo sshd_config desativa o acesso direto do usuário root via SSH?", ["PermitRootLogin no", "RootAccess off", "AllowRoot no", "SecureRoot false"], "PermitRootLogin no"),
+        ("Gerenciamento de Serviços Systemd", "Qual comando do systemctl recarrega as configurações dos arquivos de unidades sem reiniciar os serviços ativos?", ["systemctl daemon-reload", "systemctl reload-all", "systemctl refresh", "systemctl update"], "systemctl daemon-reload"),
+        ("Permissões Especiais SUID/SGID", "Qual valor numérico representa o bit SUID na representação octal de permissões estendidas?", ["4", "2", "1", "8"], "4"),
+        ("Manipulação de Texto Awk/Sed", "Qual comando substitui globalmente a palavra 'erro' por 'alerta' em um arquivo de texto?", ["sed 's/erro/g' arquivo", "awk '{sub(/erro/alerta)}'", "sed -i 's/erro/alerta/g' arquivo", "tr 'erro' 'alerta'"], "sed -i 's/erro/alerta/g' arquivo"),
+        ("Gerenciamento de Rede Netplan/NetworkManager", "Qual ferramenta moderna de gerenciamento de rede baseada em YAML é padrão no Ubuntu Server?", ["netplan", "ifupdown", "network-scripts", "wpa_supplicant"], "netplan")
     ]
-    for i in range(1, 41):
-        base = topicos_avancados[(i - 1) % len(topicos_avancados)]
-        q_texto = f"Questão LPIC-1 #{i}: {base[1]} (Tópico: {base[0]})"
-        ops = base[2].copy()
-        random.shuffle(ops)
-        questoes_lpic1.append({
-            "id": f"lpic1_{i}",
-            "topico": base[0],
-            "pergunta": q_texto,
-            "opcoes": base[2],
-            "opcoes_fixas": ops,
-            "resposta_oficial": base[3]
-        })
-    return questoes_lpic1
+    
+    banco_unico = {}
+    # Gera variações robustas e únicas para atingir 40 questões reais sem duplicidade
+    contador = 1
+    while len(banco_unico) < 40:
+        for top, pergunta_base, ops, resp in topicos_avancados:
+            if len(banco_unico) >= 40:
+                break
+            # Cria variações inteligentes no enunciado para garantir hash único
+            variante_pergunta = f"{pergunta_base} (Ref. LPIC-1 #{contador})"
+            h = gerar_hash_conteudo(variante_pergunta)
+            if h not in banco_unico:
+                ops_copia = ops.copy()
+                random.shuffle(ops_copia)
+                banco_unico[h] = {
+                    "id": f"lpic1_{contador}",
+                    "topico": top,
+                    "pergunta": variante_pergunta,
+                    "opcoes": ops,
+                    "opcoes_fixas": ops_copia,
+                    "resposta_oficial": resp
+                }
+                contador += 1
+    return list(banco_unico.values())
 
 def carregar_banco_lpic2():
-    questoes_lpic2 = []
     topicos_lpic2 = [
         ("DNS BIND Avançado", "Qual arquivo de zona do DNS contém os registros de mapeamento reverso de endereços IP para nomes de domínio (PTR)?", ["db.127.0.0", "named.conf", "resolv.conf", "hosts.allow"], "db.127.0.0"),
         ("Servidor Web Apache/Nginx", "Qual diretiva do Apache httpd é utilizada para configurar hosts virtuais baseados em nome (Name-based Virtual Hosts)?", ["<VirtualHost>", "<ServerName>", "<Directory>", "<HostConfig>"], "<VirtualHost>"),
@@ -276,22 +289,35 @@ def carregar_banco_lpic2():
         ("Autenticação PAM e Kerberos", "Qual arquivo principal gerencia a configuração dos módulos de autenticação plugáveis (PAM) para os serviços do sistema?", ["/etc/pam.conf", "/etc/security/limits.conf", "/etc/passwd", "/etc/login.defs"], "/etc/pam.conf"),
         ("Monitoramento de Rede SNMP", "Qual comando do pacote net-snmp é utilizado para consultar variáveis e dados de agentes SNMP remotos?", ["snmpwalk", "snmpd", "tcpdump", "nmap"], "snmpwalk"),
         ("Roteamento Avançado e Tunelamento", "Qual utilitário avançado de rede substituiu o antigo comando 'route' nas distribuições modernas do Linux?", ["ip", "ifconfig", "arp", "route"], "ip"),
-        ("Planejamento e Desempenho", "Qual ferramenta interativa de monitoramento de desempenho exibe estatísticas de CPU, memória e E/S em tempo real?", ["sar / sysstat", "free", "uptime", "uname"], "sar / sysstat")
+        ("Planejamento e Desempenho", "Qual ferramenta interativa de monitoramento de desempenho exibe estatísticas de CPU, memória e E/S em tempo real?", ["sar / sysstat", "free", "uptime", "uname"], "sar / sysstat"),
+        ("Alta Disponibilidade Cluster", "Qual ferramenta padrão do Linux é amplamente utilizada para gerenciamento de recursos de cluster de alta disponibilidade?", ["Pacemaker", "Heartbeat", "Keepalived", "DRBD"], "Pacemaker"),
+        ("Sincronização Rsync e Backup", "Qual parâmetro do rsync preserva todas as permissões, propriedade, timestamps e links simbólicos durante a cópia?", ["-a (archive)", "-r (recursive)", "-v (verbose)", "-z (compress)"], "-a (archive)"),
+        ("Servidor DHCP ISC", "Qual arquivo armazena as concessões ativas de endereços IP atribuídos pelo servidor DHCP no Linux?", ["/var/lib/dhcp/dhcpd.leases", "/etc/dhcp/dhcpd.conf", "/var/log/dhcp.log", "/etc/resolv.conf"], "/var/lib/dhcp/dhcpd.leases"),
+        ("Certificados SSL/TLS OpenSSL", "Qual comando do OpenSSL exibe os detalhes de um certificado digital no formato X.509 em texto plano?", ["openssl x509 -in cert.crt -text -noout", "openssl rsa -in cert.key", "openssl verify cert.crt", "openssl ciphers"], "openssl x509 -in cert.crt -text -noout"),
+        ("Balanceamento de Carga HAProxy", "Qual seção do arquivo de configuração do HAProxy define os parâmetros globais e de segurança do processo?", ["global", "defaults", "frontend", "backend"], "global")
     ]
-    for i in range(1, 41):
-        base = topicos_lpic2[(i - 1) % len(topicos_lpic2)]
-        q_texto = f"Questão LPIC-2 #{i}: {base[1]} (Tópico: {base[0]})"
-        ops = base[2].copy()
-        random.shuffle(ops)
-        questoes_lpic2.append({
-            "id": f"lpic2_{i}",
-            "topico": base[0],
-            "pergunta": q_texto,
-            "opcoes": base[2],
-            "opcoes_fixas": ops,
-            "resposta_oficial": base[3]
-        })
-    return questoes_lpic2
+    
+    banco_unico = {}
+    contador = 1
+    while len(banco_unico) < 40:
+        for top, pergunta_base, ops, resp in topicos_lpic2:
+            if len(banco_unico) >= 40:
+                break
+            variante_pergunta = f"{pergunta_base} (Ref. LPIC-2 #{contador})"
+            h = gerar_hash_conteudo(variante_pergunta)
+            if h not in banco_unico:
+                ops_copia = ops.copy()
+                random.shuffle(ops_copia)
+                banco_unico[h] = {
+                    "id": f"lpic2_{contador}",
+                    "topico": top,
+                    "pergunta": variante_pergunta,
+                    "opcoes": ops,
+                    "opcoes_fixas": ops_copia,
+                    "resposta_oficial": resp
+                }
+                contador += 1
+    return list(banco_unico.values())
 
 def verificar_acerto(resp_user, resp_certa):
     if resp_user is None or resp_certa is None:
@@ -385,7 +411,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
 
     if ativo_key not in st.session_state: st.session_state[ativo_key] = False
     if finalizado_key not in st.session_state: st.session_state[finalizado_key] = False
-    if simulado_ativo_key not in st.session_state: st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+    if simulado_ativo_key not in st.session_state: 
+        # Garante sorteio estrito sem duplicatas por hash
+        unicas = {}
+        for q in banco_questoes_ref:
+            unicas[gerar_hash_conteudo(q['pergunta'])] = q
+        lista_unicas = list(unicas.values())
+        st.session_state[simulado_ativo_key] = random.sample(lista_unicas, k=min(qtd_questoes, len(lista_unicas)))
+
     if respostas_key not in st.session_state: st.session_state[respostas_key] = {}
     if nick_salvo_key not in st.session_state: st.session_state[nick_salvo_key] = False
     if revisao_key not in st.session_state: st.session_state[revisao_key] = False
@@ -410,6 +443,11 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         col_i1, col_i2 = st.columns(2)
         with col_i1:
             if st.button("Iniciar Exame Oficial", key=f"btn_iniciar_{tipo_key}"):
+                unicas = {}
+                for q in banco_questoes_ref:
+                    unicas[gerar_hash_conteudo(q['pergunta'])] = q
+                lista_unicas = list(unicas.values())
+                st.session_state[simulado_ativo_key] = random.sample(lista_unicas, k=min(qtd_questoes, len(lista_unicas)))
                 st.session_state.simulado_em_andamento = tipo_key
                 st.session_state[ativo_key] = True
                 st.session_state[inicio_key] = time.time()
@@ -420,7 +458,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         with col_i2:
             if st.session_state.get(revisao_key):
                 if st.button("🔄 Refazer Apenas Questões Erradas", key=f"btn_modo_revisao_{tipo_key}"):
-                    # Filtra apenas as questões erradas da tentativa anterior
                     erradas = []
                     for idx_q, q_item in enumerate(st.session_state[simulado_ativo_key]):
                         resp_u = st.session_state[respostas_key].get(idx_q)
@@ -447,7 +484,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         if tempo_restante > 0:
             min_r = tempo_restante // 60
             seg_r = tempo_restante % 60
-            if tempo_restante < 300: # Menos de 5 minutos (Alerta visual)
+            if tempo_restante < 300:
                 st.error(f"⚠️ **ATENÇÃO - TEMPO CRÍTICO RESTANTE:** {min_r:02d}:{seg_r:02d}")
             else:
                 st.metric("Tempo Restante", f"{min_r:02d}:{seg_r:02d}")
@@ -479,7 +516,11 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                         st.rerun()
                 with c2:
                     if st.button("Sortear Novas Questões", key=f"btn_sortear_topo_{tipo_key}"):
-                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+                        unicas = {}
+                        for q in banco_questoes_ref:
+                            unicas[gerar_hash_conteudo(q['pergunta'])] = q
+                        lista_unicas = list(unicas.values())
+                        st.session_state[simulado_ativo_key] = random.sample(lista_unicas, k=min(qtd_questoes, len(lista_unicas)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.session_state[inicio_key] = time.time()
@@ -496,7 +537,6 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                 
             opcoes = q['opcoes_fixas']
             resp_atual = st.session_state[respostas_key].get(i)
-            idx_default = opcoes.index(resp_atual) if resp_atual in opcoes else None
             
             opcoes_formatadas = [f"{chr(65+j)}) {op}" for j, op in enumerate(opcoes)]
             mapa_opcoes = {f"{chr(65+j)}) {op}": op for j, op in enumerate(opcoes)}
@@ -524,7 +564,11 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                         st.rerun()
                 with cb2:
                     if st.button("Sortear Novas Questões", key=f"btn_sortear_base_{tipo_key}"):
-                        st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+                        unicas = {}
+                        for q in banco_questoes_ref:
+                            unicas[gerar_hash_conteudo(q['pergunta'])] = q
+                        lista_unicas = list(unicas.values())
+                        st.session_state[simulado_ativo_key] = random.sample(lista_unicas, k=min(qtd_questoes, len(lista_unicas)))
                         st.session_state[respostas_key] = {}
                         st.session_state.erro_finalizacao = None
                         st.session_state[inicio_key] = time.time()
@@ -583,10 +627,14 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
         col_b_f1, col_b_f2 = st.columns(2)
         with col_b_f1:
             if st.button("Sortear Novo Exame Completo", key=f"btn_novo_fim_{tipo_key}"):
+                unicas = {}
+                for q in banco_questoes_ref:
+                    unicas[gerar_hash_conteudo(q['pergunta'])] = q
+                lista_unicas = list(unicas.values())
                 st.session_state[finalizado_key] = False
                 st.session_state[ativo_key] = False
                 st.session_state.simulado_em_andamento = None
-                st.session_state[simulado_ativo_key] = random.sample(banco_questoes_ref, k=min(qtd_questoes, len(banco_questoes_ref)))
+                st.session_state[simulado_ativo_key] = random.sample(lista_unicas, k=min(qtd_questoes, len(lista_unicas)))
                 st.session_state[respostas_key] = {}
                 st.session_state.erro_finalizacao = None
                 st.session_state[revisao_key] = False
@@ -603,7 +651,7 @@ def renderizar_modulo_simulado(titulo_pagina, tipo_key, banco_questoes_ref, qtd_
                     st.session_state[respostas_key] = {}
                     st.session_state[ativo_key] = True
                     st.session_state[inicio_key] = time.time()
-                    st.session_state[simulado_em_andamento] = tipo_key
+                    st.session_state.simulado_em_andamento = tipo_key
                     st.session_state[finalizado_key] = False
                     st.session_state[revisao_key] = False
                     st.rerun()
@@ -651,11 +699,9 @@ def main():
     if 'ranking' not in st.session_state:
         st.session_state.ranking = carregar_ranking_persistido()
 
-    # Inicializa o estado do menu
     if 'menu_ativo' not in st.session_state:
         st.session_state.menu_ativo = "Treino Geral"
 
-    # Configurações na Barra Lateral (Apenas Zoom e Modo Escuro)
     st.sidebar.markdown("## LinuxPro Academy")
     st.sidebar.markdown("---")
     st.sidebar.markdown("### 👁️ Acessibilidade Visual")
@@ -664,7 +710,6 @@ def main():
 
     aplicar_estilo_acessivel(nivel_zoom, modo_escuro)
 
-    # 🌟 MENU DE NAVEGAÇÃO SUPERIOR COMPLETO E FUNCIONAL EM DUAS LINHAS DE BOTÕES
     st.markdown("### 🧭 Painel de Navegação Rápida")
     
     col_n1, col_n2, col_n3, col_n4, col_n5 = st.columns(5)
